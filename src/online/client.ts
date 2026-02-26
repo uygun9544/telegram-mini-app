@@ -197,6 +197,11 @@ class OnlineClient {
     this.send("join_queue", { profile });
   }
 
+  async syncBalance(profile: PlayerProfile) {
+    await this.connect();
+    this.send("sync_balance", { profile });
+  }
+
   cancelQueue() {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return;
     this.send("cancel_queue");

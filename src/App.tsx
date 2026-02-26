@@ -28,6 +28,10 @@ export default function App() {
   const startGameTimeoutRef = useRef<number | null>(null);
   const telegramUser = getTelegramUser();
   const playerProfile = buildOnlinePlayerProfile(telegramUser);
+  const playerProfileId = playerProfile.playerId;
+  const playerProfileName = playerProfile.name;
+  const playerProfileAvatarUrl = playerProfile.avatarUrl;
+  const playerProfileSlipper = playerProfile.slipper;
 
   const [winnerData, setWinnerData] = useState<{
     winner: "player" | "enemy";
@@ -52,6 +56,17 @@ export default function App() {
       stopTrainingConfigRefresh();
     };
   }, []);
+
+  useEffect(() => {
+    onlineClient.syncBalance({
+      playerId: playerProfileId,
+      name: playerProfileName,
+      avatarUrl: playerProfileAvatarUrl,
+      slipper: playerProfileSlipper,
+    }).catch(() => {
+      // keep current local balance if sync is temporarily unavailable
+    });
+  }, [playerProfileId, playerProfileName, playerProfileAvatarUrl, playerProfileSlipper]);
 
   function clearStartGameTimeout() {
     if (startGameTimeoutRef.current) {
@@ -84,7 +99,7 @@ export default function App() {
 
   useEffect(() => {
     const unsubBalanceUpdate = onlineClient.on("balanceUpdate", (payload) => {
-      if (payload.playerId === playerProfile.playerId) {
+      if (payload.playerId === playerProfileId) {
         setBalance(payload.balance);
       }
     });
@@ -107,7 +122,7 @@ export default function App() {
       setOnlineRoomId(payload.roomId);
       setOnlineOpponent(payload.opponent);
       setOnlineInitialRoundPlan(payload.roundPlan);
-      setAcceptedPlayerIds([playerProfile.playerId, payload.opponent.playerId]);
+      setAcceptedPlayerIds([playerProfileId, payload.opponent.playerId]);
       startGameTimeoutRef.current = window.setTimeout(() => {
         setScreen("game");
       }, 1000);
@@ -134,7 +149,7 @@ export default function App() {
       unsubMatchCancelled();
       unsubOpponentLeft();
     };
-  }, [onlineRoomId, playerProfile.playerId]);
+  }, [onlineRoomId, playerProfileId]);
 
   async function handlePlay() {
     setGameMode("online");
@@ -171,8 +186,8 @@ export default function App() {
     if (!onlineRoomId) return;
 
     setAcceptedPlayerIds((prev) => {
-      if (prev.includes(playerProfile.playerId)) return prev;
-      return [...prev, playerProfile.playerId];
+      if (prev.includes(playerProfileId)) return prev;
+      return [...prev, playerProfileId];
     });
     onlineClient.acceptMatch(onlineRoomId);
   }
@@ -181,7 +196,7 @@ export default function App() {
     return (
       <Home
         onlineWsUrl={ONLINE_WS_URL}
-        slipperSrc={playerProfile.slipper}
+        slipperSrc={playerProfileSlipper}
         balance={balance}
         onTraining={startTrainingNow}
         onChangeSlipper={handleChangeSlipper}
@@ -193,7 +208,7 @@ export default function App() {
     return (
       <>
         <Searching
-          slipperSrc={playerProfile.slipper}
+          slipperSrc={playerProfileSlipper}
           balance={balance}
           onTraining={startTrainingNow}
           onChangeSlipper={handleChangeSlipper}
@@ -206,13 +221,13 @@ export default function App() {
           <Found
             onAccept={handleAcceptFound}
             onClose={() => leaveSearchingToHome("match")}
-            playerName={playerProfile.name}
-            playerProfileAvatar={playerProfile.avatarUrl ?? undefined}
-            playerSlipper={playerProfile.slipper}
+            playerName={playerProfileName}
+            playerProfileAvatar={playerProfileAvatarUrl ?? undefined}
+            playerSlipper={playerProfileSlipper}
             opponentName={onlineOpponent.name}
             opponentAvatar={onlineOpponent.avatarUrl ?? undefined}
             opponentSlipper={onlineOpponent.slipper}
-            playerAccepted={acceptedPlayerIds.includes(playerProfile.playerId)}
+            playerAccepted={acceptedPlayerIds.includes(playerProfileId)}
             opponentAccepted={acceptedPlayerIds.includes(onlineOpponent.playerId)}
           />
         ) : null}
@@ -228,8 +243,8 @@ export default function App() {
         onlineOpponentAvatar={onlineOpponent?.avatarUrl ?? undefined}
         onlineOpponentSlipper={onlineOpponent?.slipper}
         onlineOpponentPlayerId={onlineOpponent?.playerId}
-        playerId={playerProfile.playerId}
-        playerSlipper={playerProfile.slipper}
+        playerId={playerProfileId}
+        playerSlipper={playerProfileSlipper}
         initialOnlineRoundPlan={onlineInitialRoundPlan ?? undefined}
         user={telegramUser}
         onExitToWinner={(data: WinnerPayload) => {

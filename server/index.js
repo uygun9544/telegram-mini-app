@@ -697,6 +697,28 @@ wss.on("connection", (ws) => {
       return;
     }
 
+    if (message.type === "sync_balance") {
+      const profile = message.profile || {};
+
+      client.playerName = profile.name || client.playerName || "Игрок";
+      client.playerId = profile.playerId || client.playerId || clientId;
+      client.avatarUrl = profile.avatarUrl || client.avatarUrl || null;
+      client.slipper = profile.slipper || client.slipper || "/green.png";
+
+      updatePlayerStatsMeta(client.playerId, {
+        name: client.playerName
+      });
+
+      const balance = ensurePlayerBalance(client.playerId);
+
+      send(client.ws, {
+        type: "balance_sync",
+        playerId: client.playerId,
+        balance
+      });
+      return;
+    }
+
     if (message.type === "cancel_queue") {
       removeFromQueue(clientId);
       return;
