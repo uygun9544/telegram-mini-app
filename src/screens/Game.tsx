@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import {
-  formatTimeWithCentiseconds,
+  formatTimeFromMs,
   generatePositions,
   getRandomPair,
   randomDelay
@@ -72,6 +72,9 @@ export default function Game({
   initialOnlineRoundPlan,
   mode = "training"
 }: GameProps) {
+  const ROUND_HIT_ANIMATION_MS = 800;
+  const ROUND_RESULT_VISIBLE_MS = 2300;
+
   const [round, setRound] = useState(1);
   const [playerWins, setPlayerWins] = useState(0);
   const [enemyWins, setEnemyWins] = useState(0);
@@ -98,6 +101,8 @@ export default function Game({
   const revealTimeoutRef = useRef<number | null>(null);
   const enemyTimeoutRef = useRef<number | null>(null);
   const nextRoundTimeoutRef = useRef<number | null>(null);
+  const roundResultTimeoutRef = useRef<number | null>(null);
+  const exitToWinnerTimeoutRef = useRef<number | null>(null);
   const markerTimeoutsRef = useRef<number[]>([]);
   const enemyPendingRef = useRef(false);
   const roundTokenRef = useRef(0);
@@ -137,6 +142,8 @@ export default function Game({
     if (revealTimeoutRef.current) clearTimeout(revealTimeoutRef.current);
     if (enemyTimeoutRef.current) clearTimeout(enemyTimeoutRef.current);
     if (nextRoundTimeoutRef.current) clearTimeout(nextRoundTimeoutRef.current);
+    if (roundResultTimeoutRef.current) clearTimeout(roundResultTimeoutRef.current);
+    if (exitToWinnerTimeoutRef.current) clearTimeout(exitToWinnerTimeoutRef.current);
     markerTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
 
     uiTimerRef.current = null;
@@ -144,6 +151,8 @@ export default function Game({
     revealTimeoutRef.current = null;
     enemyTimeoutRef.current = null;
     nextRoundTimeoutRef.current = null;
+    roundResultTimeoutRef.current = null;
+    exitToWinnerTimeoutRef.current = null;
     markerTimeoutsRef.current = [];
     enemyPendingRef.current = false;
   }
@@ -179,7 +188,7 @@ export default function Game({
     timerStartRef.current = Date.now();
     uiTimerRef.current = window.setInterval(() => {
       setTimerMs(Date.now() - timerStartRef.current);
-    }, 10);
+    }, 1000);
 
     let revealDelayMs = randomDelay();
     let actionWindowMs = 20000;
@@ -443,70 +452,82 @@ export default function Game({
       result = "enemy";
     }
 
+    const roundResultPopupDelayMs = result === "draw" ? 0 : ROUND_HIT_ANIMATION_MS;
+    const roundResultTotalDelayMs = roundResultPopupDelayMs + ROUND_RESULT_VISIBLE_MS;
+
+    const isPlayerFinalWin = result === "player" && playerWins + 1 >= 3;
+    const isEnemyFinalWin = result === "enemy" && enemyWins + 1 >= 3;
+
     if (result === "player") {
       setRoundHitOwner("player");
       setRoundHitVersion((value) => value + 1);
-      setPlayerWins(prev => {
-        const updated = prev + 1;
-        if (updated === 3) {
-          if (mode === "online" && onlineRoomId) {
-            onlineClient.reportMatchResult({
-              roomId: onlineRoomId,
-              winnerPlayerId: playerId
-            });
-          }
+      setPlayerWins(prev => prev + 1);
 
-          setTimeout(() => {
-            onExitToWinner({
-              winner: "player",
-              name: playerName,
-              avatar: playerSlipper,
-              profileAvatar: user?.photo_url,
-              reward: 5
-            });
-          }, 1000);
+      roundResultTimeoutRef.current = window.setTimeout(() => {
+        setWinnerText(`${playerName} выиграл`);
+      }, roundResultPopupDelayMs);
+
+      if (isPlayerFinalWin) {
+        if (mode === "online" && onlineRoomId) {
+          onlineClient.reportMatchResult({
+            roomId: onlineRoomId,
+            winnerPlayerId: playerId
+          });
         }
-        return updated;
-      });
-      setWinnerText(`${playerName} выиграл`);
+
+        exitToWinnerTimeoutRef.current = window.setTimeout(() => {
+          onExitToWinner({
+            winner: "player",
+            name: playerName,
+            avatar: playerSlipper,
+            profileAvatar: user?.photo_url,
+            reward: 5
+          });
+        }, roundResultTotalDelayMs);
+      }
     }
 
     else if (result === "enemy") {
       setRoundHitOwner("enemy");
       setRoundHitVersion((value) => value + 1);
-      setEnemyWins(prev => {
-        const updated = prev + 1;
-        if (updated === 3) {
-          if (mode === "online" && onlineRoomId && onlineOpponentPlayerId) {
-            onlineClient.reportMatchResult({
-              roomId: onlineRoomId,
-              winnerPlayerId: onlineOpponentPlayerId
-            });
-          }
+      setEnemyWins(prev => prev + 1);
 
-          setTimeout(() => {
-            onExitToWinner({
-              winner: "enemy",
-              name: enemyName,
-              avatar: enemySlipper,
-              profileAvatar: enemyAvatar,
-              reward: 5
-            });
-          }, 1000);
+      roundResultTimeoutRef.current = window.setTimeout(() => {
+        setWinnerText(`${enemyName} выиграл`);
+      }, roundResultPopupDelayMs);
+
+      if (isEnemyFinalWin) {
+        if (mode === "online" && onlineRoomId && onlineOpponentPlayerId) {
+          onlineClient.reportMatchResult({
+            roomId: onlineRoomId,
+            winnerPlayerId: onlineOpponentPlayerId
+          });
         }
-        return updated;
-      });
-      setWinnerText(`${enemyName} выиграл`);
+
+        exitToWinnerTimeoutRef.current = window.setTimeout(() => {
+          onExitToWinner({
+            winner: "enemy",
+            name: enemyName,
+            avatar: enemySlipper,
+            profileAvatar: enemyAvatar,
+            reward: 5
+          });
+        }, roundResultTotalDelayMs);
+      }
     }
 
     else {
       setWinnerText("Ничья");
     }
 
+    if (isPlayerFinalWin || isEnemyFinalWin) {
+      return;
+    }
+
     nextRoundTimeoutRef.current = window.setTimeout(() => {
       if (currentRoundToken !== roundTokenRef.current) return;
       setRound(r => r + 1);
-    }, 1500);
+    }, roundResultTotalDelayMs);
   }
 
   const playerResultText =
@@ -527,15 +548,7 @@ export default function Game({
           ? `Время ${enemyName}: ${uiEnemyTime} мс`
           : "\u00A0";
 
-  const mainTimerText = formatTimeWithCentiseconds(timerMs);
-  const separatorIndex = mainTimerText.lastIndexOf(":");
-  const timerMainPartRaw = separatorIndex >= 0
-    ? mainTimerText.slice(0, separatorIndex)
-    : mainTimerText;
-  const timerFractionPart = separatorIndex >= 0
-    ? mainTimerText.slice(separatorIndex + 1)
-    : "00";
-  const timerMainPart = timerMainPartRaw.replace(":", " : ");
+  const mainTimerText = formatTimeFromMs(timerMs).replace(":", " : ");
 
   return (
     <div className="game-screen">
@@ -584,10 +597,7 @@ export default function Game({
       </div>
 
       <div className="main-timer">
-        <span>{timerMainPart}</span>
-        <span className={`main-timer-fraction ${visible ? "active" : ""}`}>
-          {` : ${timerFractionPart}`}
-        </span>
+        <span>{mainTimerText}</span>
       </div>
 
       {winnerText && (

@@ -12,9 +12,18 @@ const TRAINING_CONFIG_ADMIN_TOKEN = process.env.TRAINING_CONFIG_ADMIN_TOKEN || "
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const dataDirPath = path.join(__dirname, "data");
+
+const legacyDataDirPath = path.join(__dirname, "data");
+const dataDirPath = process.env.DATA_DIR
+  ? path.resolve(process.env.DATA_DIR)
+  : process.env.RENDER_DISK_PATH
+    ? path.join(path.resolve(process.env.RENDER_DISK_PATH), "telegram-mini-app-data")
+    : legacyDataDirPath;
+
 const balanceFilePath = path.join(dataDirPath, "balances.json");
 const trainingConfigFilePath = path.join(dataDirPath, "training-config.json");
+const legacyBalanceFilePath = path.join(legacyDataDirPath, "balances.json");
+const legacyTrainingConfigFilePath = path.join(legacyDataDirPath, "training-config.json");
 
 const DEFAULT_TRAINING_BOT_CONFIG = {
   reactionMinMs: 500,
@@ -49,6 +58,22 @@ function normalizeTrainingBotConfig(raw) {
 function ensureBalanceStorage() {
   if (!fs.existsSync(dataDirPath)) {
     fs.mkdirSync(dataDirPath, { recursive: true });
+  }
+
+  if (
+    dataDirPath !== legacyDataDirPath &&
+    !fs.existsSync(balanceFilePath) &&
+    fs.existsSync(legacyBalanceFilePath)
+  ) {
+    fs.copyFileSync(legacyBalanceFilePath, balanceFilePath);
+  }
+
+  if (
+    dataDirPath !== legacyDataDirPath &&
+    !fs.existsSync(trainingConfigFilePath) &&
+    fs.existsSync(legacyTrainingConfigFilePath)
+  ) {
+    fs.copyFileSync(legacyTrainingConfigFilePath, trainingConfigFilePath);
   }
 
   if (!fs.existsSync(balanceFilePath)) {
@@ -233,6 +258,7 @@ const server = http.createServer(async (req, res) => {
       connectedClients: clients.size,
       trackedPlayers: Object.keys(playerBalances).length,
       trainingBotConfig,
+      storagePath: dataDirPath,
       timestamp: new Date().toISOString()
     };
 

@@ -497,8 +497,8 @@ button {
 
 .round-hit-slipper {
   position: absolute;
-  width: 168px;
-  height: 168px;
+  width: 252px;
+  height: 252px;
   object-fit: contain;
   pointer-events: none;
   opacity: 0;
@@ -534,18 +534,9 @@ button {
 .main-timer {
   margin: 10px 0 8px;
   text-align: center;
-  opacity: 0.85;
+  opacity: 0.5;
   font-size: var(--text-1-size);
   line-height: var(--text-1-line);
-}
-
-.main-timer-fraction {
-  opacity: 0.28;
-  transition: opacity 0.2s ease;
-}
-
-.main-timer-fraction.active {
-  opacity: 1;
 }
 
 .winner-popup {
@@ -558,8 +549,8 @@ button {
   border-radius: var(--radius-lg);
   background: var(--color-surface-3);
   text-align: center;
-  font-size: var(--text-h4-size);
-  line-height: var(--text-h4-line);
+  font-size: var(--text-h3-size);
+  line-height: var(--text-h3-line);
   font-weight: 400;
   animation: fadeIn 0.3s ease;
 }
@@ -587,7 +578,7 @@ button {
 .click-marker.enemy {
   width: 6px;
   height: 6px;
-  background: #ff6b6b;
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .square {
@@ -645,26 +636,6 @@ button {
   align-items: center;
   text-align: center;
   position: relative;
-}
-
-.winner-hit-slipper {
-  position: fixed;
-  width: 291px;
-  height: 291px;
-  object-fit: contain;
-  pointer-events: none;
-  opacity: 0;
-  z-index: 101;
-  left: 50%;
-  top: 68%;
-}
-
-.winner-hit-slipper.player {
-  animation: winnerSlipperImpactLeft 0.9s ease-out;
-}
-
-.winner-hit-slipper.enemy {
-  animation: winnerSlipperImpactRight 0.9s ease-out;
 }
 
 .winner-top {
@@ -860,44 +831,6 @@ button {
 
   100% {
     background-position: 0% 50%;
-  }
-}
-
-@keyframes winnerSlipperImpactLeft {
-  0% {
-    opacity: 0;
-    transform: translate(calc(-50% - 84px), calc(-50% - 18px)) rotate(-24deg) scale(1.1);
-  }
-  35% {
-    opacity: 1;
-    transform: translate(calc(-50% + 12px), calc(-50% + 8px)) rotate(9deg) scale(0.94);
-  }
-  65% {
-    opacity: 1;
-    transform: translate(calc(-50% - 3px), calc(-50% + 1px)) rotate(-3deg) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(calc(-50% - 12px), calc(-50% - 3px)) rotate(-7deg) scale(1.03);
-  }
-}
-
-@keyframes winnerSlipperImpactRight {
-  0% {
-    opacity: 0;
-    transform: translate(calc(-50% + 84px), calc(-50% - 18px)) rotate(24deg) scale(1.1);
-  }
-  35% {
-    opacity: 1;
-    transform: translate(calc(-50% - 12px), calc(-50% + 8px)) rotate(-9deg) scale(0.94);
-  }
-  65% {
-    opacity: 1;
-    transform: translate(calc(-50% + 3px), calc(-50% + 1px)) rotate(3deg) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(calc(-50% + 12px), calc(-50% - 3px)) rotate(7deg) scale(1.03);
   }
 }
 
