@@ -29,6 +29,7 @@ const wss = new WebSocketServer({ noServer: true });
 const queue = [];
 const clients = new Map();
 const rooms = new Map();
+const COLORS = ["blue", "red", "yellow", "green"];
 
 function send(ws, payload) {
   if (ws.readyState === WebSocket.OPEN) {
@@ -50,6 +51,55 @@ function removeFromQueue(clientId) {
 function getClientName(clientId) {
   const client = clients.get(clientId);
   return client?.playerName || "Игрок";
+}
+
+function getClientProfile(clientId) {
+  const client = clients.get(clientId);
+
+  return {
+    playerId: client?.playerId || clientId,
+    name: client?.playerName || "Игрок",
+    avatarUrl: client?.avatarUrl || null,
+    slipper: client?.slipper || "/green.png"
+  };
+}
+
+function getRandomPairColors() {
+  const shuffled = [...COLORS].sort(() => 0.5 - Math.random());
+  return [shuffled[0], shuffled[1]];
+}
+
+function generatePositions() {
+  const p1 = {
+    top: Math.random() * 50 + 10,
+    left: Math.random() * 70 + 10
+  };
+
+  let p2;
+
+  do {
+    p2 = {
+      top: Math.random() * 50 + 10,
+      left: Math.random() * 70 + 10
+    };
+  } while (
+    Math.abs(p1.top - p2.top) < 20 &&
+    Math.abs(p1.left - p2.left) < 20
+  );
+
+  return [p1, p2];
+}
+
+function createRoundPlan(roundNumber) {
+  const revealDelayMs = Math.floor(Math.random() * 6000) + 2000;
+
+  return {
+    round: roundNumber,
+    colors: getRandomPairColors(),
+    positions: generatePositions(),
+    revealAt: Date.now() + revealDelayMs,
+    actionWindowMs: 20000
+  };
 }
 
 function notifyRoomBoth(room, payloadA, payloadB = payloadA) {
@@ -94,7 +144,8 @@ function tryMatchmake() {
       id: roomId,
       players: [playerA, playerB],
       accepted: new Set(),
-      rounds: new Map()
+      rounds: new Map(),
+      roundPlans: new Map()
     };
 
     rooms.set(roomId, room);
@@ -104,13 +155,13 @@ function tryMatchmake() {
     send(clientA.ws, {
       type: "match_found",
       roomId,
-      opponentName: getClientName(playerB)
+      opponent: getClientProfile(playerB)
     });
 
     send(clientB.ws, {
       type: "match_found",
       roomId,
-      opponentName: getClientName(playerA)
+      opponent: getClientProfile(playerA)
     });
   }
 }
@@ -122,6 +173,9 @@ wss.on("connection", (ws) => {
     id: clientId,
     ws,
     playerName: "Игрок",
+    playerId: clientId,
+    avatarUrl: null,
+    slipper: "/green.png",
     roomId: null
   });
 
@@ -141,7 +195,13 @@ wss.on("connection", (ws) => {
     if (!client) return;
 
     if (message.type === "join_queue") {
-      client.playerName = message.playerName || "Игрок";
+      const profile = message.profile || {};
+
+      client.playerName = profile.name || "Игрок";
+      client.playerId = profile.playerId || clientId;
+      client.avatarUrl = profile.avatarUrl || null;
+      client.slipper = profile.slipper || "/green.png";
+
       removeFromQueue(clientId);
       queue.push(clientId);
       tryMatchmake();
@@ -158,22 +218,36 @@ wss.on("connection", (ws) => {
       if (!room || !room.players.includes(clientId)) return;
 
       room.accepted.add(clientId);
+
+      notifyRoomBoth(room, {
+        type: "match_accept_update",
+        roomId: room.id,
+        acceptedPlayerIds: Array.from(room.accepted)
+      });
+
       if (room.accepted.size === 2) {
         const [a, b] = room.players;
         const playerA = clients.get(a);
         const playerB = clients.get(b);
         if (!playerA || !playerB) return;
 
+        const firstRoundPlan = createRoundPlan(1);
+        room.roundPlans.set(1, firstRoundPlan);
+
         send(playerA.ws, {
           type: "match_ready",
           roomId: room.id,
-          opponentName: getClientName(b)
+          opponent: getClientProfile(b),
+          roundPlan: firstRoundPlan,
+          acceptedPlayerIds: Array.from(room.accepted)
         });
 
         send(playerB.ws, {
           type: "match_ready",
           roomId: room.id,
-          opponentName: getClientName(a)
+          opponent: getClientProfile(a),
+          roundPlan: firstRoundPlan,
+          acceptedPlayerIds: Array.from(room.accepted)
         });
       }
       return;
@@ -211,12 +285,17 @@ wss.on("connection", (ws) => {
         const clientB = clients.get(b);
         if (!clientA || !clientB) return;
 
+        const nextRoundNumber = Number(message.round) + 1;
+        const nextRoundPlan = createRoundPlan(nextRoundNumber);
+        room.roundPlans.set(nextRoundNumber, nextRoundPlan);
+
         send(clientA.ws, {
           type: "round_result",
           roomId: room.id,
           round: message.round,
           enemyState: current.b.state,
-          enemyTime: current.b.time
+          enemyTime: current.b.time,
+          nextRoundPlan
         });
 
         send(clientB.ws, {
@@ -224,7 +303,8 @@ wss.on("connection", (ws) => {
           roomId: room.id,
           round: message.round,
           enemyState: current.a.state,
-          enemyTime: current.a.time
+          enemyTime: current.a.time,
+          nextRoundPlan
         });
       }
       return;

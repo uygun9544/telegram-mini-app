@@ -1,10 +1,12 @@
 import type { PlayerState } from "../game/types";
+import type { PlayerProfile, RoundPlan } from "./types";
 
 type ClientEventMap = {
   connected: undefined;
   disconnected: undefined;
-  matchFound: { roomId: string; opponentName: string };
-  matchReady: { roomId: string; opponentName: string };
+  matchFound: { roomId: string; opponent: PlayerProfile };
+  matchReady: { roomId: string; opponent: PlayerProfile; roundPlan: RoundPlan };
+  matchAcceptUpdate: { roomId: string; acceptedPlayerIds: string[] };
   matchCancelled: { roomId: string };
   opponentLeft: { roomId: string };
   error: { message: string };
@@ -22,6 +24,7 @@ type RoundResultPayload = {
   round: number;
   enemyState: Exclude<PlayerState, null>;
   enemyTime: number | null;
+  nextRoundPlan: RoundPlan;
 };
 
 type PendingRoundResolver = {
@@ -31,8 +34,9 @@ type PendingRoundResolver = {
 
 type ServerMessage =
   | { type: "connected" }
-  | { type: "match_found"; roomId: string; opponentName: string }
-  | { type: "match_ready"; roomId: string; opponentName: string }
+  | { type: "match_found"; roomId: string; opponent: PlayerProfile }
+  | { type: "match_ready"; roomId: string; opponent: PlayerProfile; roundPlan: RoundPlan }
+  | { type: "match_accept_update"; roomId: string; acceptedPlayerIds: string[] }
   | { type: "match_cancelled"; roomId: string }
   | { type: "opponent_left"; roomId: string }
   | RoundResultPayload & { type: "round_result" }
@@ -54,6 +58,7 @@ class OnlineClient {
     disconnected: new Set(),
     matchFound: new Set(),
     matchReady: new Set(),
+    matchAcceptUpdate: new Set(),
     matchCancelled: new Set(),
     opponentLeft: new Set(),
     error: new Set()
@@ -85,13 +90,20 @@ class OnlineClient {
       case "match_found":
         this.emit("matchFound", {
           roomId: message.roomId,
-          opponentName: message.opponentName
+          opponent: message.opponent
         });
         return;
       case "match_ready":
         this.emit("matchReady", {
           roomId: message.roomId,
-          opponentName: message.opponentName
+          opponent: message.opponent,
+          roundPlan: message.roundPlan
+        });
+        return;
+      case "match_accept_update":
+        this.emit("matchAcceptUpdate", {
+          roomId: message.roomId,
+          acceptedPlayerIds: message.acceptedPlayerIds
         });
         return;
       case "match_cancelled":
@@ -164,9 +176,9 @@ class OnlineClient {
     this.socket.send(JSON.stringify({ type, ...payload }));
   }
 
-  async joinQueue(playerName: string) {
+  async joinQueue(profile: PlayerProfile) {
     await this.connect();
-    this.send("join_queue", { playerName });
+    this.send("join_queue", { profile });
   }
 
   cancelQueue() {

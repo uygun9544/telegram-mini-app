@@ -1,21 +1,19 @@
 import SlipperCard from "../components/SlipperCard";
+import TopBalanceBar from "../components/TopBalanceBar";
 
 interface HomeProps {
   onTraining: () => void;
   onPlay: () => void;
   onlineWsUrl: string;
+  slipperSrc: string;
 }
 
-export default function Home({ onTraining, onPlay, onlineWsUrl }: HomeProps) {
+export default function Home({ onTraining, onPlay, onlineWsUrl, slipperSrc }: HomeProps) {
   return (
     <div className="screen home-screen">
-      <div className="balance balance-row">
-        <span>Баланс: 300 ⭐</span>
-
-        <button className="mode-toggle" onClick={onTraining}>Тренировка</button>
-      </div>
+      <TopBalanceBar onTraining={onTraining} />
       <div className="debug-ws">WS: {onlineWsUrl}</div>
-      <SlipperCard />
+      <SlipperCard imageSrc={slipperSrc} />
 
       <button className="main-btn" onClick={onPlay}>
         Играть

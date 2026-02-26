@@ -1,14 +1,11 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
-import type { TelegramUser } from "../telegram";
-import { createEnemyTurnPlan } from "../game/adapters";
 import {
   formatTime,
   generatePositions,
   getRandomPair,
   randomDelay
 } from "../game/core";
-import { onlineClient } from "../online/client";
 import type {
   ClickMarker,
   ColorItem,
@@ -17,8 +14,11 @@ import type {
   Position,
   RoundRefType
 } from "../game/types";
+import { createEnemyTurnPlan } from "../game/adapters";
+import { onlineClient } from "../online/client";
+import type { RoundPlan } from "../online/types";
+import type { TelegramUser } from "../telegram";
 import {
-  getTelegramPlayerAvatar,
   getTelegramPlayerName,
   OPPONENT_NAME,
   OPPONENT_PROFILE_AVATAR,
@@ -30,6 +30,10 @@ interface GameProps {
   mode?: GameMode;
   onlineRoomId?: string;
   onlineOpponentName?: string;
+  onlineOpponentAvatar?: string;
+  onlineOpponentSlipper?: string;
+  playerSlipper: string;
+  initialOnlineRoundPlan?: RoundPlan;
   onExitToWinner: (data: {
     winner: "player" | "enemy";
     name: string;
@@ -39,11 +43,29 @@ interface GameProps {
   }) => void;
 }
 
+const COLOR_EMOJIS: Record<string, string> = {
+  blue: "🟦",
+  red: "🟥",
+  yellow: "🟨",
+  green: "🟩"
+};
+
+function toColorItem(colorName: string): ColorItem {
+  return {
+    name: colorName,
+    emoji: COLOR_EMOJIS[colorName] || "⬜"
+  };
+}
+
 export default function Game({
   onExitToWinner,
   user,
   onlineRoomId,
   onlineOpponentName,
+  onlineOpponentAvatar,
+  onlineOpponentSlipper,
+  playerSlipper,
+  initialOnlineRoundPlan,
   mode = "training"
 }: GameProps) {
   const [round, setRound] = useState(1);
@@ -76,14 +98,22 @@ export default function Game({
   const squareAppearTimeRef = useRef(0);
   const gameAreaRef = useRef<HTMLDivElement | null>(null);
   const markerIdRef = useRef(0);
+  const onlineRoundPlansRef = useRef<Record<number, RoundPlan>>({});
 
   const playerName = getTelegramPlayerName(user);
-  const playerAvatar = getTelegramPlayerAvatar(user);
+
   const enemyName = onlineOpponentName || OPPONENT_NAME;
+  const enemySlipper = onlineOpponentSlipper || OPPONENT_SLIPPER;
+  const enemyAvatar = onlineOpponentAvatar || OPPONENT_PROFILE_AVATAR;
+
+  useEffect(() => {
+    if (!initialOnlineRoundPlan) return;
+    onlineRoundPlansRef.current[initialOnlineRoundPlan.round] = initialOnlineRoundPlan;
+  }, [initialOnlineRoundPlan]);
 
   useEffect(() => {
     startRound();
-  }, [round]);
+  }, [round, mode]);
 
   useEffect(() => {
     return () => {
@@ -108,16 +138,7 @@ export default function Game({
     enemyPendingRef.current = false;
   }
 
-  function startRound() {
-    clearRoundTimers();
-    const currentRoundToken = ++roundTokenRef.current;
-
-    const newPair = getRandomPair();
-    setPair(newPair);
-    setOrder([newPair[0], newPair[1]]);
-    setPositions(generatePositions());
-    setVisible(false);
-
+  function setupRoundState() {
     setWinnerText(null);
     setUiPlayerState(null);
     setUiEnemyState(null);
@@ -134,15 +155,48 @@ export default function Game({
       enemyTime: null,
       enemyFinished: false
     };
+  }
 
-    const roundStart = Date.now();
+  function startRound() {
+    clearRoundTimers();
+    const currentRoundToken = ++roundTokenRef.current;
+
+    setupRoundState();
+    setVisible(false);
     setTimer(0);
 
+    const roundStart = Date.now();
     uiTimerRef.current = window.setInterval(() => {
       setTimer(Math.floor((Date.now() - roundStart) / 1000));
     }, 1000);
 
-    const delay = randomDelay();
+    let revealDelayMs = randomDelay();
+    let actionWindowMs = 20000;
+
+    if (mode === "online" && onlineRoomId) {
+      const roundPlan = onlineRoundPlansRef.current[round];
+
+      if (roundPlan) {
+        const [firstColor, secondColor] = roundPlan.colors;
+        const roundPair: [ColorItem, ColorItem] = [toColorItem(firstColor), toColorItem(secondColor)];
+
+        setPair(roundPair);
+        setOrder([roundPair[0], roundPair[1]]);
+        setPositions(roundPlan.positions);
+
+        revealDelayMs = Math.max(roundPlan.revealAt - Date.now(), 0);
+        actionWindowMs = roundPlan.actionWindowMs;
+      } else {
+        setPair(getRandomPair());
+        setOrder([]);
+        setPositions([]);
+      }
+    } else {
+      const newPair = getRandomPair();
+      setPair(newPair);
+      setOrder([newPair[0], newPair[1]]);
+      setPositions(generatePositions());
+    }
 
     revealTimeoutRef.current = window.setTimeout(() => {
       if (currentRoundToken !== roundTokenRef.current) return;
@@ -153,8 +207,8 @@ export default function Game({
       actionTimeoutRef.current = window.setTimeout(() => {
         if (currentRoundToken !== roundTokenRef.current) return;
         forceFinish();
-      }, 20000);
-    }, delay);
+      }, actionWindowMs);
+    }, revealDelayMs);
   }
 
   function tryResolve() {
@@ -211,7 +265,7 @@ export default function Game({
     addPlayerClickMarker(e);
 
     if (r.playerStep === 0) {
-      if (color === order[0].name) {
+      if (color === order[0]?.name) {
         r.playerStep = 1;
       } else {
         r.playerState = "miss";
@@ -223,7 +277,7 @@ export default function Game({
     }
 
     if (r.playerStep === 1) {
-      if (color === order[1].name) {
+      if (color === order[1]?.name) {
         r.playerState = "success";
         r.playerTime = Date.now() - squareAppearTimeRef.current;
         r.playerFinished = true;
@@ -270,6 +324,8 @@ export default function Game({
         })
         .then((payload) => {
           if (currentRoundToken !== roundTokenRef.current) return;
+
+          onlineRoundPlansRef.current[payload.nextRoundPlan.round] = payload.nextRoundPlan;
 
           addEnemyMarkersForResult(payload.enemyState);
           r.enemyState = payload.enemyState;
@@ -384,7 +440,7 @@ export default function Game({
             onExitToWinner({
               winner: "player",
               name: playerName,
-              avatar: playerAvatar,
+              avatar: playerSlipper,
               profileAvatar: user?.photo_url,
               reward: 5
             });
@@ -403,8 +459,8 @@ export default function Game({
             onExitToWinner({
               winner: "enemy",
               name: enemyName,
-              avatar: OPPONENT_SLIPPER,
-              profileAvatar: OPPONENT_PROFILE_AVATAR,
+              avatar: enemySlipper,
+              profileAvatar: enemyAvatar,
               reward: 5
             });
           }, 1000);
@@ -446,9 +502,7 @@ export default function Game({
     <div className="game-screen">
       <div className="top-bar">
         <div className="player-half">
-          <img   src="/green.png" className="mini"
-          />
-         
+          <img src={playerSlipper} className="mini" />
           <div className="slots">
             {[0, 1, 2].map(i => (
               <div key={i} className={`slot ${i < playerWins ? "win" : ""}`} />
@@ -462,7 +516,7 @@ export default function Game({
               <div key={i} className={`slot ${i < enemyWins ? "win" : ""}`} />
             ))}
           </div>
-          <img src="/pink.png" className="mini" />
+          <img src={enemySlipper} className="mini" />
         </div>
       </div>
 

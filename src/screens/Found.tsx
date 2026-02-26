@@ -1,8 +1,8 @@
 import SlipperCard from "../components/SlipperCard";
 import MatchPlayerCard from "../components/MatchPlayerCard";
+import TopBalanceBar from "../components/TopBalanceBar";
 import {
   OPPONENT_NAME,
-  OPPONENT_PROFILE_AVATAR,
   OPPONENT_SLIPPER,
 } from "../utils/player";
 
@@ -11,7 +11,13 @@ interface FoundProps {
   onClose: () => void;
   playerName: string;
   playerProfileAvatar?: string;
+  playerSlipper: string;
   opponentName?: string;
+  opponentAvatar?: string;
+  opponentSlipper?: string;
+  playerAccepted: boolean;
+  opponentAccepted: boolean;
+  onTraining: () => void;
 }
 
 export default function Found({
@@ -19,13 +25,19 @@ export default function Found({
   onClose,
   playerName,
   playerProfileAvatar,
+  playerSlipper,
   opponentName,
+  opponentAvatar,
+  opponentSlipper,
+  playerAccepted,
+  opponentAccepted,
+  onTraining,
 }: FoundProps) {
   return (
     <>
       <div className="screen searching-screen found-underlay">
-        <div className="balance">Баланс: 300 ⭐</div>
-        <SlipperCard />
+        <TopBalanceBar onTraining={onTraining} />
+        <SlipperCard imageSrc={playerSlipper} />
 
         <div className="search-row">
           <div className="search-box">Идёт поиск игры</div>
@@ -42,23 +54,29 @@ export default function Found({
 
           <div className="players">
             <MatchPlayerCard
-              slipperSrc="/green.png"
+              slipperSrc={playerSlipper}
               name={playerName}
               avatarSrc={playerProfileAvatar}
+              isAccepted={playerAccepted}
             />
 
             <div className="players-vs">VS</div>
 
             <MatchPlayerCard
-              slipperSrc={OPPONENT_SLIPPER}
+              slipperSrc={opponentSlipper || OPPONENT_SLIPPER}
               name={opponentName || OPPONENT_NAME}
-              avatarSrc={OPPONENT_PROFILE_AVATAR}
+              avatarSrc={opponentAvatar}
+              isAccepted={opponentAccepted}
             />
           </div>
 
           <div className="search-row modal-action-row">
-            <button className="main-btn modal-main-btn" onClick={onAccept}>
-              Принять игру
+            <button
+              className={`main-btn modal-main-btn ${playerAccepted ? "accepted" : ""}`}
+              onClick={onAccept}
+              disabled={playerAccepted}
+            >
+              {playerAccepted ? "Игра принята" : "Принять игру"}
             </button>
 
             <button

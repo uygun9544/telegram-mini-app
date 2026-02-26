@@ -314,6 +314,12 @@ button {
   flex: 1;
 }
 
+.modal-main-btn.accepted,
+.modal-main-btn:disabled {
+  background: rgba(255, 255, 255, 0.35);
+  color: #fff;
+}
+
 .modal h3,
 .modal h1 {
   margin: 0;
@@ -347,6 +353,10 @@ button {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+}
+
+.player-card.accepted {
+  background: rgba(50, 229, 94, 0.3);
 }
 
 .players-vs {
