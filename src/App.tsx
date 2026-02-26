@@ -31,6 +31,7 @@ export default function App() {
   const toastTimeoutRef = useRef<number | null>(null);
   const screenRef = useRef<Screen>("home");
   const onlineRoomIdRef = useRef<string | null>(null);
+  const lastSelfMatchCancelAtRef = useRef<number>(0);
   const telegramUser = getTelegramUser();
   const playerProfile = buildOnlinePlayerProfile(telegramUser);
   const playerProfileId = playerProfile.playerId;
@@ -112,6 +113,7 @@ export default function App() {
     clearStartGameTimeout();
 
     if (cancelType === "match" && onlineRoomId) {
+      lastSelfMatchCancelAtRef.current = Date.now();
       onlineClient.cancelMatch(onlineRoomId);
     }
 
@@ -156,10 +158,18 @@ export default function App() {
     });
 
     const unsubMatchCancelled = onlineClient.on("matchCancelled", () => {
+      const cancelledBySelf = Date.now() - lastSelfMatchCancelAtRef.current < 2000;
+      if (cancelledBySelf) {
+        lastSelfMatchCancelAtRef.current = 0;
+      }
+
       clearStartGameTimeout();
       resetOnlineMatchState();
       setScreen("home");
-      showToast("Игра была прервана соперником");
+
+      if (!cancelledBySelf) {
+        showToast("Игра была прервана соперником");
+      }
     });
 
     const unsubOpponentLeft = onlineClient.on("opponentLeft", () => {
@@ -216,6 +226,7 @@ export default function App() {
     clearStartGameTimeout();
 
     if (onlineRoomId) {
+      lastSelfMatchCancelAtRef.current = Date.now();
       onlineClient.cancelMatch(onlineRoomId);
     } else {
       onlineClient.cancelQueue();
