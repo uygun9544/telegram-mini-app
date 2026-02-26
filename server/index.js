@@ -4,11 +4,13 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { Pool } from "pg";
 
 const PORT = Number(process.env.PORT || 8787);
 const DEFAULT_BALANCE = 300;
 const WIN_REWARD = 5;
 const TRAINING_CONFIG_ADMIN_TOKEN = process.env.TRAINING_CONFIG_ADMIN_TOKEN || "";
+const DATABASE_URL = process.env.DATABASE_URL || "";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,8 +24,10 @@ const dataDirPath = process.env.DATA_DIR
 
 const balanceFilePath = path.join(dataDirPath, "balances.json");
 const trainingConfigFilePath = path.join(dataDirPath, "training-config.json");
+const playersFilePath = path.join(dataDirPath, "players.json");
 const legacyBalanceFilePath = path.join(legacyDataDirPath, "balances.json");
 const legacyTrainingConfigFilePath = path.join(legacyDataDirPath, "training-config.json");
+const legacyPlayersFilePath = path.join(legacyDataDirPath, "players.json");
 
 const DEFAULT_TRAINING_BOT_CONFIG = {
   reactionMinMs: 500,
@@ -76,6 +80,14 @@ function ensureBalanceStorage() {
     fs.copyFileSync(legacyTrainingConfigFilePath, trainingConfigFilePath);
   }
 
+  if (
+    dataDirPath !== legacyDataDirPath &&
+    !fs.existsSync(playersFilePath) &&
+    fs.existsSync(legacyPlayersFilePath)
+  ) {
+    fs.copyFileSync(legacyPlayersFilePath, playersFilePath);
+  }
+
   if (!fs.existsSync(balanceFilePath)) {
     fs.writeFileSync(balanceFilePath, "{}", "utf-8");
   }
@@ -86,6 +98,10 @@ function ensureBalanceStorage() {
       JSON.stringify(DEFAULT_TRAINING_BOT_CONFIG, null, 2),
       "utf-8"
     );
+  }
+
+  if (!fs.existsSync(playersFilePath)) {
+    fs.writeFileSync(playersFilePath, "{}", "utf-8");
   }
 }
 
@@ -103,6 +119,22 @@ function loadBalances() {
 function saveBalances(balances) {
   ensureBalanceStorage();
   fs.writeFileSync(balanceFilePath, JSON.stringify(balances, null, 2), "utf-8");
+}
+
+function loadPlayers() {
+  ensureBalanceStorage();
+
+  try {
+    const raw = fs.readFileSync(playersFilePath, "utf-8");
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function savePlayers(players) {
+  ensureBalanceStorage();
+  fs.writeFileSync(playersFilePath, JSON.stringify(players, null, 2), "utf-8");
 }
 
 function loadTrainingBotConfig() {
@@ -163,12 +195,191 @@ function readJsonBody(req) {
 }
 
 const playerBalances = loadBalances();
+const playerStats = loadPlayers();
 let trainingBotConfig = loadTrainingBotConfig();
+let postgresPool = null;
+let storageMode = "json";
+
+function isPostgresEnabled() {
+  return Boolean(postgresPool);
+}
+
+function upsertPlayerToPostgres(playerId) {
+  if (!isPostgresEnabled()) return;
+
+  const stats = playerStats[playerId];
+  if (!stats) return;
+
+  void postgresPool
+    .query(
+      `
+        INSERT INTO player_stats (player_id, name, balance, wins, losses)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (player_id)
+        DO UPDATE SET
+          name = EXCLUDED.name,
+          balance = EXCLUDED.balance,
+          wins = EXCLUDED.wins,
+          losses = EXCLUDED.losses,
+          updated_at = NOW()
+      `,
+      [
+        stats.playerId,
+        stats.name,
+        stats.balance,
+        stats.wins,
+        stats.losses
+      ]
+    )
+    .catch((error) => {
+      console.error("[storage] failed to upsert player to postgres:", error.message);
+    });
+}
+
+async function initializePostgresIfConfigured() {
+  if (!DATABASE_URL) {
+    console.log("[storage] DATABASE_URL is not set; using JSON storage");
+    return;
+  }
+
+  try {
+    postgresPool = new Pool({
+      connectionString: DATABASE_URL,
+      ssl: {
+        rejectUnauthorized: false
+      }
+    });
+
+    await postgresPool.query(`
+      CREATE TABLE IF NOT EXISTS player_stats (
+        player_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL DEFAULT 'Игрок',
+        balance INT NOT NULL DEFAULT 300,
+        wins INT NOT NULL DEFAULT 0,
+        losses INT NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    const { rows } = await postgresPool.query(
+      "SELECT player_id, name, balance, wins, losses FROM player_stats"
+    );
+
+    rows.forEach((row) => {
+      playerStats[row.player_id] = {
+        playerId: row.player_id,
+        name: row.name || "Игрок",
+        balance: Number(row.balance) || DEFAULT_BALANCE,
+        wins: Number(row.wins) || 0,
+        losses: Number(row.losses) || 0
+      };
+
+      playerBalances[row.player_id] = playerStats[row.player_id].balance;
+    });
+
+    storageMode = "postgres";
+    console.log(`[storage] postgres enabled, loaded ${rows.length} players`);
+  } catch (error) {
+    postgresPool = null;
+    storageMode = "json";
+    console.error("[storage] failed to initialize postgres, fallback to JSON:", error.message);
+  }
+}
+
+function ensurePlayerStats(playerId) {
+  if (!playerStats[playerId]) {
+    playerStats[playerId] = {
+      playerId,
+      name: "Игрок",
+      balance: DEFAULT_BALANCE,
+      wins: 0,
+      losses: 0
+    };
+    savePlayers(playerStats);
+    upsertPlayerToPostgres(playerId);
+  }
+
+  const stats = playerStats[playerId];
+
+  if (typeof stats.playerId !== "string") {
+    stats.playerId = playerId;
+  }
+
+  if (typeof stats.name !== "string" || !stats.name.trim()) {
+    stats.name = "Игрок";
+  }
+
+  if (typeof stats.balance !== "number") {
+    stats.balance = DEFAULT_BALANCE;
+  }
+
+  if (typeof stats.wins !== "number") {
+    stats.wins = 0;
+  }
+
+  if (typeof stats.losses !== "number") {
+    stats.losses = 0;
+  }
+
+  savePlayers(playerStats);
+
+  return stats;
+}
+
+function updatePlayerStatsMeta(playerId, patch) {
+  const stats = ensurePlayerStats(playerId);
+
+  if (typeof patch.name === "string" && patch.name.trim()) {
+    stats.name = patch.name.trim();
+  }
+
+  savePlayers(playerStats);
+  upsertPlayerToPostgres(playerId);
+}
+
+function buildLeaderboard(limit = 50) {
+  const normalizedLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
+
+  return Object.values(playerStats)
+    .map((row) => {
+      const wins = Number(row.wins) || 0;
+      const losses = Number(row.losses) || 0;
+      const balance = Number(row.balance) || DEFAULT_BALANCE;
+      const matches = wins + losses;
+      const winRate = matches > 0
+        ? Math.round((wins / matches) * 1000) / 10
+        : 0;
+
+      return {
+        playerId: row.playerId,
+        name: row.name || "Игрок",
+        balance,
+        wins,
+        losses,
+        matches,
+        winRate
+      };
+    })
+    .sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (b.balance !== a.balance) return b.balance - a.balance;
+      if (a.losses !== b.losses) return a.losses - b.losses;
+      return a.name.localeCompare(b.name, "ru");
+    })
+    .slice(0, normalizedLimit);
+}
 
 function ensurePlayerBalance(playerId) {
+  ensurePlayerStats(playerId);
   if (typeof playerBalances[playerId] !== "number") {
     playerBalances[playerId] = DEFAULT_BALANCE;
     saveBalances(playerBalances);
+  }
+
+  if (typeof playerStats[playerId]?.balance !== "number") {
+    playerStats[playerId].balance = playerBalances[playerId];
+    savePlayers(playerStats);
   }
 
   return playerBalances[playerId];
@@ -179,6 +390,9 @@ function adjustPlayerBalance(playerId, delta) {
   const next = current + delta;
   playerBalances[playerId] = next;
   saveBalances(playerBalances);
+  playerStats[playerId].balance = next;
+  savePlayers(playerStats);
+  upsertPlayerToPostgres(playerId);
   return next;
 }
 
@@ -259,11 +473,26 @@ const server = http.createServer(async (req, res) => {
       trackedPlayers: Object.keys(playerBalances).length,
       trainingBotConfig,
       storagePath: dataDirPath,
+      storageMode,
       timestamp: new Date().toISOString()
     };
 
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(payload));
+    return;
+  }
+
+  if (req.url?.startsWith("/leaderboard") && req.method === "GET") {
+    const parsedUrl = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+    const limit = parsedUrl.searchParams.get("limit") || "50";
+    const rows = buildLeaderboard(Number(limit));
+
+    writeJson(res, 200, {
+      ok: true,
+      totalPlayers: Object.keys(playerStats).length,
+      limit: rows.length,
+      rows
+    });
     return;
   }
 
@@ -450,6 +679,10 @@ wss.on("connection", (ws) => {
       client.avatarUrl = profile.avatarUrl || null;
       client.slipper = profile.slipper || "/green.png";
 
+      updatePlayerStatsMeta(client.playerId, {
+        name: client.playerName
+      });
+
       const balance = ensurePlayerBalance(client.playerId);
 
       send(client.ws, {
@@ -594,6 +827,15 @@ wss.on("connection", (ws) => {
       const winnerBalance = adjustPlayerBalance(winnerClient.playerId, WIN_REWARD);
       const loserBalance = adjustPlayerBalance(loserClient.playerId, -WIN_REWARD);
 
+      const winnerStats = ensurePlayerStats(winnerClient.playerId);
+      const loserStats = ensurePlayerStats(loserClient.playerId);
+
+      winnerStats.wins += 1;
+      loserStats.losses += 1;
+      savePlayers(playerStats);
+      upsertPlayerToPostgres(winnerClient.playerId);
+      upsertPlayerToPostgres(loserClient.playerId);
+
       send(winnerClient.ws, {
         type: "balance_update",
         playerId: winnerClient.playerId,
@@ -653,7 +895,27 @@ server.on("upgrade", (request, socket, head) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`Matchmaking WS server is running on ws://localhost:${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
+async function startServer() {
+  await initializePostgresIfConfigured();
+
+  server.listen(PORT, () => {
+    console.log(`Matchmaking WS server is running on ws://localhost:${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/health`);
+  });
+}
+
+void startServer();
+
+process.once("SIGINT", async () => {
+  if (postgresPool) {
+    await postgresPool.end();
+  }
+  process.exit(0);
+});
+
+process.once("SIGTERM", async () => {
+  if (postgresPool) {
+    await postgresPool.end();
+  }
+  process.exit(0);
 });

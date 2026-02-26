@@ -22,6 +22,27 @@ npm start
 
 По умолчанию сервер стартует на `ws://localhost:8787`.
 
+## Кнопка "Играть" в сообщении бота
+
+В проект добавлен минимальный Telegram-бот (`server/bot.js`), который отправляет кнопку Web App в сообщении (`/start` и `/play`).
+
+### Настройка
+
+1. В `server` создай `.env` по примеру `server/.env.example`.
+2. Укажи:
+	- `BOT_TOKEN` — токен бота из BotFather
+	- `MINI_APP_URL` — публичный `https` URL твоей мини-аппы
+
+### Запуск
+
+```bash
+cd server
+npm install
+npm run start:bot
+```
+
+После этого при `/start` бот отправит сообщение с кнопкой `Играть`, которая откроет Mini App.
+
 Проверка здоровья сервера:
 
 - `http://localhost:8787/health`
@@ -40,6 +61,53 @@ npm start
 3. Иначе (локально) используется `server/data`.
 
 Для Render обязательно используй persistent disk, иначе после пересоздания инстанса данные могут обнулиться.
+
+## Миграция на Neon Postgres (без боли)
+
+Сервер уже поддерживает `DATABASE_URL` с автоматическим fallback на JSON.
+
+### 1) Создай БД в Neon
+
+- Зарегистрируйся в Neon
+- Создай Project
+- Скопируй `connection string` (это и есть `DATABASE_URL`)
+
+### 2) Добавь `DATABASE_URL` в Render
+
+В backend-сервисе Render:
+
+- `Environment` → `Add Environment Variable`
+- Key: `DATABASE_URL`
+- Value: строка подключения из Neon
+
+Сохрани и сделай redeploy.
+
+### 3) Проверь, что сервер переключился на Postgres
+
+Открой:
+
+- `/health`
+
+Там должно быть:
+
+- `"storageMode": "postgres"`
+
+Если `storageMode` = `json`, сервер автоматически работает по старой схеме и ничего не ломается.
+
+### 4) Таблица игроков
+
+Сервер автоматически создаёт таблицу `player_stats` и пишет туда:
+
+- `player_id`
+- `name`
+- `balance`
+- `wins`
+- `losses`
+
+Лидерборд отдаётся через:
+
+- `GET /leaderboard`
+- `GET /leaderboard?limit=20`
 
 ### Render: как сохранить звёзды навсегда
 

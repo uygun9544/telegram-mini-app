@@ -8,10 +8,14 @@
   },
   "scripts": {
     "start": "node index.js",
+    "start:bot": "node bot.js",
     "check": "node --check index.js",
     "deploy:backend:check": "npm run check"
   },
   "dependencies": {
+    "dotenv": "^16.6.1",
+    "pg": "^8.16.3",
+    "telegraf": "^4.16.3",
     "ws": "^8.18.0"
   }
 }
