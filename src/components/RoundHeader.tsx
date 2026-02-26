@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { DEFAULT_OPPONENT_SLIPPER, DEFAULT_PLAYER_SLIPPER } from "../utils/player";
 
 interface RoundHeaderProps {
   round: number;
@@ -47,7 +48,7 @@ export default function RoundHeader({
 
       <div className="wins-row">
         <div className="player-wins">
-          <img src="/green.png" className="mini" />
+          <img src={DEFAULT_PLAYER_SLIPPER} className="mini" />
           <div className="slots">
             {[0, 1, 2].map((i) => (
               <div
@@ -67,7 +68,7 @@ export default function RoundHeader({
               />
             ))}
           </div>
-          <img src="/pink.png" className="mini" />
+          <img src={DEFAULT_OPPONENT_SLIPPER} className="mini" />
         </div>
       </div>
     </div>

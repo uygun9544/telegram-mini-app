@@ -178,5 +178,5 @@ VITE_MATCH_WS_URL=wss://your-domain.com
 
 - Тапок назначается игроку случайно при первом входе и сохраняется локально по `playerId`.
 - Добавляй новые тапки в папку `src/assets/slippers` (png/jpg/webp/svg), они автоматически попадут в рандомный пул.
-- Базовые тапки `/green.png` и `/pink.png` тоже остаются в пуле.
+- Базовые тапки `default` и `default enemy` тоже остаются в пуле.
 "# telegram-mini-app" 

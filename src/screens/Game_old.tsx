@@ -2,6 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import type { MouseEvent } from "react";
 import type { TelegramUser } from "../telegram";
 import {
+  DEFAULT_OPPONENT_SLIPPER,
+  DEFAULT_PLAYER_SLIPPER,
   getTelegramPlayerAvatar,
   getTelegramPlayerName,
   OPPONENT_NAME,
@@ -428,7 +430,7 @@ export default function Game({ onExitToWinner, user }: GameProps) {
     <div className="game-screen">
       <div className="top-bar">
         <div className="player-half">
-          <img   src="/green.png" className="mini"
+          <img   src={DEFAULT_PLAYER_SLIPPER} className="mini"
           />
          
           <div className="slots">
@@ -444,7 +446,7 @@ export default function Game({ onExitToWinner, user }: GameProps) {
               <div key={i} className={`slot ${i < enemyWins ? "win" : ""}`} />
             ))}
           </div>
-          <img src="/pink.png" className="mini" />
+          <img src={DEFAULT_OPPONENT_SLIPPER} className="mini" />
         </div>
       </div>
 

@@ -12,20 +12,24 @@ const discoveredSlipperUrls = Object.values(discoveredSlippers);
 
 function findDiscoveredSlipperByFilename(filename: string): string | null {
   const lowerFilename = filename.toLowerCase();
-  const found = discoveredSlipperUrls.find((slipperUrl) =>
-    slipperUrl.toLowerCase().includes(`/${lowerFilename}.`)
-  );
+  const found = discoveredSlipperUrls.find((slipperUrl) => {
+    const rawPath = slipperUrl.split("?")[0] || slipperUrl;
+    const decodedPath = decodeURIComponent(rawPath).toLowerCase();
+    const basename = decodedPath.substring(decodedPath.lastIndexOf("/") + 1);
+    const filenameWithoutExtension = basename.replace(/\.[^/.]+$/, "");
+    return filenameWithoutExtension === lowerFilename;
+  });
 
   return found || null;
 }
 
 export const DEFAULT_PLAYER_SLIPPER =
-  findDiscoveredSlipperByFilename("green") ||
+  findDiscoveredSlipperByFilename("default") ||
   discoveredSlipperUrls[0] ||
-  "/green.png";
+  "/default.png";
 
 export const DEFAULT_OPPONENT_SLIPPER =
-  findDiscoveredSlipperByFilename("pink") ||
+  findDiscoveredSlipperByFilename("default enemy") ||
   discoveredSlipperUrls[1] ||
   DEFAULT_PLAYER_SLIPPER;
 

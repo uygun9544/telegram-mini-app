@@ -536,7 +536,7 @@ function getClientProfile(clientId) {
     playerId: client?.playerId || clientId,
     name: client?.playerName || "Игрок",
     avatarUrl: client?.avatarUrl || null,
-    slipper: client?.slipper || "/green.png"
+    slipper: client?.slipper || "/default.png"
   };
 }
 
@@ -652,7 +652,7 @@ wss.on("connection", (ws) => {
     playerName: "Игрок",
     playerId: clientId,
     avatarUrl: null,
-    slipper: "/green.png",
+    slipper: "/default.png",
     roomId: null
   });
 
@@ -677,7 +677,7 @@ wss.on("connection", (ws) => {
       client.playerName = profile.name || "Игрок";
       client.playerId = profile.playerId || clientId;
       client.avatarUrl = profile.avatarUrl || null;
-      client.slipper = profile.slipper || "/green.png";
+      client.slipper = profile.slipper || "/default.png";
 
       updatePlayerStatsMeta(client.playerId, {
         name: client.playerName
@@ -703,7 +703,7 @@ wss.on("connection", (ws) => {
       client.playerName = profile.name || client.playerName || "Игрок";
       client.playerId = profile.playerId || client.playerId || clientId;
       client.avatarUrl = profile.avatarUrl || client.avatarUrl || null;
-      client.slipper = profile.slipper || client.slipper || "/green.png";
+      client.slipper = profile.slipper || client.slipper || "/default.png";
 
       updatePlayerStatsMeta(client.playerId, {
         name: client.playerName
