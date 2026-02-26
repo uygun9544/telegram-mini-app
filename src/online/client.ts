@@ -4,6 +4,7 @@ import type { PlayerProfile, RoundPlan } from "./types";
 type ClientEventMap = {
   connected: undefined;
   disconnected: undefined;
+  balanceUpdate: { playerId: string; balance: number };
   matchFound: { roomId: string; opponent: PlayerProfile };
   matchReady: { roomId: string; opponent: PlayerProfile; roundPlan: RoundPlan };
   matchAcceptUpdate: { roomId: string; acceptedPlayerIds: string[] };
@@ -17,6 +18,11 @@ type RoundSubmitPayload = {
   round: number;
   state: Exclude<PlayerState, null>;
   time: number | null;
+};
+
+type MatchResultPayload = {
+  roomId: string;
+  winnerPlayerId: string;
 };
 
 type RoundResultPayload = {
@@ -34,6 +40,8 @@ type PendingRoundResolver = {
 
 type ServerMessage =
   | { type: "connected" }
+  | { type: "balance_sync"; playerId: string; balance: number }
+  | { type: "balance_update"; playerId: string; balance: number }
   | { type: "match_found"; roomId: string; opponent: PlayerProfile }
   | { type: "match_ready"; roomId: string; opponent: PlayerProfile; roundPlan: RoundPlan }
   | { type: "match_accept_update"; roomId: string; acceptedPlayerIds: string[] }
@@ -56,6 +64,7 @@ class OnlineClient {
   } = {
     connected: new Set(),
     disconnected: new Set(),
+    balanceUpdate: new Set(),
     matchFound: new Set(),
     matchReady: new Set(),
     matchAcceptUpdate: new Set(),
@@ -86,6 +95,13 @@ class OnlineClient {
     switch (message.type) {
       case "connected":
         this.emit("connected", undefined);
+        return;
+      case "balance_sync":
+      case "balance_update":
+        this.emit("balanceUpdate", {
+          playerId: message.playerId,
+          balance: message.balance
+        });
         return;
       case "match_found":
         this.emit("matchFound", {
@@ -216,6 +232,10 @@ class OnlineClient {
       pending.reject(new Error("Round cancelled"));
       this.pendingRoundResolvers.delete(key);
     }
+  }
+
+  reportMatchResult(payload: MatchResultPayload) {
+    this.send("match_result", payload);
   }
 }
 

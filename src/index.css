@@ -143,24 +143,28 @@ button {
   justify-content: space-between;
   gap: 12px;
   text-align: left;
+  padding-left: 26px;
 }
 
 .mode-toggle {
   border: 0;
   border-radius: 999px;
-  padding: 8px 18px;
+  height: 32px;
+  padding: 0 18px;
   background: rgba(255, 255, 255, 0.35);
   color: #fff;
-  font-size: var(--text-h4-size);
-  line-height: var(--text-h4-line);
+  font-size: var(--text-2-size);
+  line-height: var(--text-2-line);
+  font-weight: 400;
   cursor: pointer;
 }
 
 .debug-ws {
   margin-top: 8px;
-  opacity: 0.55;
+  opacity: 0.15;
   font-size: var(--text-3-size);
   line-height: var(--text-3-line);
+  text-align: center;
   word-break: break-all;
 }
 
@@ -172,6 +176,12 @@ button {
 .home-title {
   margin-top: 16px;
   opacity: 0.5;
+}
+
+.home-middle-action {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
 }
 
 .home-main-block {
@@ -193,6 +203,10 @@ button {
   flex-shrink: 0;
 }
 
+.home-middle-action + .home-card {
+  margin-top: 16px;
+}
+
 .home-screen .main-btn {
   margin-top: 20px;
 }
@@ -207,13 +221,6 @@ button {
 .home-card-footer {
   margin-top: 10px;
   text-align: center;
-}
-
-.slipper {
-  width: 220px;
-  max-width: 80vw;
-  display: block;
-  margin: 36px auto;
 }
 
 .main-btn {
@@ -458,6 +465,14 @@ button {
   text-align: center;
 }
 
+.round-box-wrap {
+  position: relative;
+}
+
+.round-box.hit {
+  animation: roundBoxImpact 0.42s ease-out;
+}
+
 .round-box h2 {
   margin: 4px 0 6px;
 }
@@ -467,6 +482,26 @@ button {
   opacity: 0.8;
   font-size: var(--text-2-size);
   line-height: var(--text-2-line);
+}
+
+.round-hit-slipper {
+  position: absolute;
+  width: 129px;
+  height: 129px;
+  object-fit: contain;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 2;
+  left: 50%;
+  top: 52%;
+}
+
+.round-hit-slipper.player {
+  animation: slipperImpactLeft 0.78s ease-out;
+}
+
+.round-hit-slipper.enemy {
+  animation: slipperImpactRight 0.78s ease-out;
 }
 
 .big-order {
@@ -623,10 +658,6 @@ button {
   object-fit: contain;
 }
 
-.winner-title {
-  margin: 0;
-}
-
 .winner-name {
   margin: 10px 0;
   font-size: var(--text-h1-size);
@@ -639,10 +670,6 @@ button {
   white-space: nowrap;
 }
 
-.winner-text {
-  margin: 0;
-}
-
 .winner-heading {
   width: 100%;
   margin: 0;
@@ -650,13 +677,6 @@ button {
 
 .winner-heading-line {
   display: block;
-}
-
-.winner-heading-name {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .winner-bottom {
@@ -720,6 +740,56 @@ button {
   to {
     opacity: 1;
     transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes roundBoxImpact {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(0.97) rotate(-1deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes slipperImpactLeft {
+  0% {
+    opacity: 0;
+    transform: translate(calc(-50% - 56px), calc(-50% - 12px)) rotate(-22deg) scale(1.08);
+  }
+  35% {
+    opacity: 1;
+    transform: translate(calc(-50% + 8px), calc(-50% + 6px)) rotate(8deg) scale(0.92);
+  }
+  65% {
+    opacity: 1;
+    transform: translate(calc(-50% - 2px), calc(-50% + 1px)) rotate(-2deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% - 10px), calc(-50% - 2px)) rotate(-6deg) scale(1.02);
+  }
+}
+
+@keyframes slipperImpactRight {
+  0% {
+    opacity: 0;
+    transform: translate(calc(-50% + 56px), calc(-50% - 12px)) rotate(22deg) scale(1.08);
+  }
+  35% {
+    opacity: 1;
+    transform: translate(calc(-50% - 8px), calc(-50% + 6px)) rotate(-8deg) scale(0.92);
+  }
+  65% {
+    opacity: 1;
+    transform: translate(calc(-50% + 2px), calc(-50% + 1px)) rotate(2deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + 10px), calc(-50% - 2px)) rotate(6deg) scale(1.02);
   }
 }
 

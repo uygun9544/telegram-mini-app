@@ -1,23 +1,35 @@
-import SlipperCard from "../components/SlipperCard";
-import MatchPlayerCard from "../components/MatchPlayerCard";
-import TopBalanceBar from "../components/TopBalanceBar";
-import {
-  OPPONENT_NAME,
-  OPPONENT_SLIPPER,
-} from "../utils/player";
-
-interface FoundProps {
+type FoundProps = {
   onAccept: () => void;
   onClose: () => void;
   playerName: string;
   playerProfileAvatar?: string;
   playerSlipper: string;
-  opponentName?: string;
+  opponentName: string;
   opponentAvatar?: string;
-  opponentSlipper?: string;
+  opponentSlipper: string;
   playerAccepted: boolean;
   opponentAccepted: boolean;
-  onTraining: () => void;
+};
+
+function PlayerCard({
+  name,
+  avatar,
+  slipper,
+  accepted,
+}: {
+  name: string;
+  avatar?: string;
+  slipper: string;
+  accepted: boolean;
+}) {
+  return (
+    <div className="found-player-card">
+      <p>{name}</p>
+      {avatar ? <img src={avatar} alt={name} /> : null}
+      <img src={slipper} alt={`${name} slipper`} />
+      <p>{accepted ? "Accepted" : "Waiting..."}</p>
+    </div>
+  );
 }
 
 export default function Found({
@@ -31,64 +43,29 @@ export default function Found({
   opponentSlipper,
   playerAccepted,
   opponentAccepted,
-  onTraining,
 }: FoundProps) {
   return (
-    <>
-      <div className="screen searching-screen found-underlay">
-        <TopBalanceBar onTraining={onTraining} />
-        <SlipperCard imageSrc={playerSlipper} />
+    <div className="found-modal">
+      <h2>Match found</h2>
 
-        <div className="search-row">
-          <div className="search-box">Идёт поиск игры</div>
-          <button className="cancel-btn" disabled>
-            ✕
-          </button>
-        </div>
-      </div>
+      <PlayerCard
+        name={playerName}
+        avatar={playerProfileAvatar}
+        slipper={playerSlipper}
+        accepted={playerAccepted}
+      />
 
-      <div className="screen modal-screen">
-        <div className="modal">
-          <h3>Игра найдена</h3>
-          <h1>Примите игру</h1>
+      <PlayerCard
+        name={opponentName}
+        avatar={opponentAvatar}
+        slipper={opponentSlipper}
+        accepted={opponentAccepted}
+      />
 
-          <div className="players">
-            <MatchPlayerCard
-              slipperSrc={playerSlipper}
-              name={playerName}
-              avatarSrc={playerProfileAvatar}
-              isAccepted={playerAccepted}
-            />
-
-            <div className="players-vs">VS</div>
-
-            <MatchPlayerCard
-              slipperSrc={opponentSlipper || OPPONENT_SLIPPER}
-              name={opponentName || OPPONENT_NAME}
-              avatarSrc={opponentAvatar}
-              isAccepted={opponentAccepted}
-            />
-          </div>
-
-          <div className="search-row modal-action-row">
-            <button
-              className={`main-btn modal-main-btn ${playerAccepted ? "accepted" : ""}`}
-              onClick={onAccept}
-              disabled={playerAccepted}
-            >
-              {playerAccepted ? "Игра принята" : "Принять игру"}
-            </button>
-
-            <button
-              className="cancel-btn"
-              onClick={onClose}
-              aria-label="Отменить игру"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
+      <button onClick={onAccept} disabled={playerAccepted}>
+        {playerAccepted ? "Accepted" : "Accept"}
+      </button>
+      <button onClick={onClose}>Cancel</button>
+    </div>
   );
 }

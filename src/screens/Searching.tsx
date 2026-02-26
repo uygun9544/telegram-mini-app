@@ -1,43 +1,40 @@
-import { useEffect } from "react";
-import SlipperCard from "../components/SlipperCard";
-import TopBalanceBar from "../components/TopBalanceBar";
+import LobbyScreenLayout from "../components/LobbyScreenLayout";
 
 interface SearchingProps {
   onCancel: () => void;
-  onFound: () => void;
-  autoFind?: boolean;
   slipperSrc?: string;
   onTraining: () => void;
+  onChangeSlipper: () => void;
+  onlineWsUrl: string;
+  balance: number;
+  isFound: boolean;
 }
 
 export default function Searching({
   onCancel,
-  onFound,
-  autoFind = true,
   slipperSrc,
-  onTraining
+  onTraining,
+  onChangeSlipper,
+  onlineWsUrl,
+  balance,
+  isFound
 }: SearchingProps) {
-  useEffect(() => {
-    if (!autoFind) return;
-
-    const timer = setTimeout(() => {
-      onFound();
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [autoFind, onFound]);
-
   return (
-    <div className="screen searching-screen">
-      <TopBalanceBar onTraining={onTraining} />
-      <SlipperCard imageSrc={slipperSrc} />
-
-      <div className="search-row">
-        <div className="search-box">Идёт поиск игры</div>
-        <button className="cancel-btn" onClick={onCancel}>
-          ✕
-        </button>
-      </div>
-    </div>
+    <LobbyScreenLayout
+      screenClassName={`searching-screen ${isFound ? "found-underlay" : ""}`}
+      balance={balance}
+      onlineWsUrl={onlineWsUrl}
+      slipperSrc={slipperSrc || ""}
+      onTraining={onTraining}
+      onChangeSlipper={onChangeSlipper}
+      bottomContent={(
+        <div className="search-row">
+          <div className="search-box">Идёт поиск игры</div>
+          <button className="cancel-btn" onClick={onCancel} disabled={isFound}>
+            ✕
+          </button>
+        </div>
+      )}
+    />
   );
 }

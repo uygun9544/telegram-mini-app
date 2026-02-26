@@ -1,7 +1,6 @@
 import type { TelegramUser } from "../telegram";
 
 export const OPPONENT_NAME = "соперник";
-export const OPPONENT_SLIPPER = "/pink.png";
 export const OPPONENT_PROFILE_AVATAR: string | null = null;
 
 const discoveredSlippers = import.meta.glob("../assets/slippers/*.{png,jpg,jpeg,webp,svg}", {
@@ -9,11 +8,36 @@ const discoveredSlippers = import.meta.glob("../assets/slippers/*.{png,jpg,jpeg,
   import: "default"
 }) as Record<string, string>;
 
-const fallbackSlippers = ["/green.png", "/pink.png"];
+const discoveredSlipperUrls = Object.values(discoveredSlippers);
+
+function findDiscoveredSlipperByFilename(filename: string): string | null {
+  const lowerFilename = filename.toLowerCase();
+  const found = discoveredSlipperUrls.find((slipperUrl) =>
+    slipperUrl.toLowerCase().includes(`/${lowerFilename}.`)
+  );
+
+  return found || null;
+}
+
+export const DEFAULT_PLAYER_SLIPPER =
+  findDiscoveredSlipperByFilename("green") ||
+  discoveredSlipperUrls[0] ||
+  "/green.png";
+
+export const DEFAULT_OPPONENT_SLIPPER =
+  findDiscoveredSlipperByFilename("pink") ||
+  discoveredSlipperUrls[1] ||
+  DEFAULT_PLAYER_SLIPPER;
+
+const fallbackSlippers = [DEFAULT_PLAYER_SLIPPER, DEFAULT_OPPONENT_SLIPPER];
+
+export const OPPONENT_SLIPPER = DEFAULT_OPPONENT_SLIPPER;
 
 const AVAILABLE_SLIPPERS = Array.from(
   new Set([...Object.values(discoveredSlippers), ...fallbackSlippers])
 );
+
+const availableSlipperSet = new Set(AVAILABLE_SLIPPERS);
 
 const PLAYER_SLIPPER_STORAGE_KEY = "player-slippers-v1";
 const ANON_PLAYER_ID_STORAGE_KEY = "anon-player-id-v1";
@@ -37,7 +61,7 @@ export function getTelegramPlayerName(user?: TelegramUser | null): string {
 }
 
 export function getTelegramPlayerAvatar(user?: TelegramUser | null): string {
-  return user?.photo_url || "/green.png";
+  return user?.photo_url || DEFAULT_PLAYER_SLIPPER;
 }
 
 function getOrCreateAnonymousPlayerId(): string {
@@ -82,9 +106,56 @@ function saveStoredSlipperMap(map: Record<string, string>) {
   localStorage.setItem(PLAYER_SLIPPER_STORAGE_KEY, JSON.stringify(map));
 }
 
-function pickRandomSlipper(): string {
+function pickRandomSlipper(exclude?: string): string {
+  if (AVAILABLE_SLIPPERS.length === 0) {
+    return fallbackSlippers[0];
+  }
+
+  const pool =
+    exclude && AVAILABLE_SLIPPERS.length > 1
+      ? AVAILABLE_SLIPPERS.filter((slipper) => slipper !== exclude)
+      : AVAILABLE_SLIPPERS;
+
+  if (pool.length === 0) {
+    return exclude || fallbackSlippers[0];
+  }
+
+  const randomIndex = Math.floor(Math.random() * pool.length);
+  return pool[randomIndex] || fallbackSlippers[0];
+}
+
+function setPlayerSlipper(user: TelegramUser | null | undefined, slipper: string) {
+  const playerId = getLocalPlayerId(user);
+  const slipperMap = getStoredSlipperMap();
+  slipperMap[playerId] = slipper;
+  saveStoredSlipperMap(slipperMap);
+}
+
+export function rerollPlayerSlipper(user?: TelegramUser | null): string {
+  const currentSlipper = getOrAssignPlayerSlipper(user);
+  const nextSlipper = pickRandomSlipper(currentSlipper);
+  setPlayerSlipper(user, nextSlipper);
+  return nextSlipper;
+}
+
+function pickInitialRandomSlipper(): string {
   const randomIndex = Math.floor(Math.random() * AVAILABLE_SLIPPERS.length);
   return AVAILABLE_SLIPPERS[randomIndex] || fallbackSlippers[0];
+}
+
+function normalizeLegacySlipperPath(slipper: string): string | null {
+  if (availableSlipperSet.has(slipper)) {
+    return slipper;
+  }
+
+  const fileName = slipper.split("/").pop();
+  if (!fileName) return null;
+
+  const candidate = discoveredSlipperUrls.find((slipperUrl) =>
+    slipperUrl.toLowerCase().endsWith(`/${fileName.toLowerCase()}`)
+  );
+
+  return candidate || null;
 }
 
 export function getOrAssignPlayerSlipper(user?: TelegramUser | null): string {
@@ -92,10 +163,17 @@ export function getOrAssignPlayerSlipper(user?: TelegramUser | null): string {
   const slipperMap = getStoredSlipperMap();
 
   if (slipperMap[playerId]) {
-    return slipperMap[playerId];
+    const normalized = normalizeLegacySlipperPath(slipperMap[playerId]);
+    if (normalized) {
+      if (normalized !== slipperMap[playerId]) {
+        slipperMap[playerId] = normalized;
+        saveStoredSlipperMap(slipperMap);
+      }
+      return normalized;
+    }
   }
 
-  const assigned = pickRandomSlipper();
+  const assigned = pickInitialRandomSlipper();
   slipperMap[playerId] = assigned;
   saveStoredSlipperMap(slipperMap);
   return assigned;

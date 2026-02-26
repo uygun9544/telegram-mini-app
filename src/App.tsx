@@ -10,12 +10,15 @@ import { onlineClient, ONLINE_WS_URL } from "./online/client";
 import { getTelegramUser } from "./telegram";
 import {
   buildOnlinePlayerProfile,
+  rerollPlayerSlipper,
 } from "./utils/player";
 
-type Screen = "home" | "searching" | "found" | "game" | "winner";
+type Screen = "home" | "searching" | "game" | "winner";
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("home");
+  const [, forcePlayerProfileRefresh] = useState(0);
+  const [balance, setBalance] = useState(300);
   const [gameMode, setGameMode] = useState<GameMode>("training");
   const [onlineRoomId, setOnlineRoomId] = useState<string | null>(null);
   const [onlineOpponent, setOnlineOpponent] = useState<PlayerProfile | null>(null);
@@ -41,20 +44,48 @@ export default function App() {
     reward: number;
   };
 
+  function clearStartGameTimeout() {
+    if (startGameTimeoutRef.current) {
+      clearTimeout(startGameTimeoutRef.current);
+      startGameTimeoutRef.current = null;
+    }
+  }
+
+  function resetOnlineMatchState() {
+    setOnlineOpponent(null);
+    setOnlineInitialRoundPlan(null);
+    setOnlineRoomId(null);
+    setAcceptedPlayerIds([]);
+  }
+
+  function leaveSearchingToHome(cancelType: "queue" | "match") {
+    clearStartGameTimeout();
+
+    if (cancelType === "match" && onlineRoomId) {
+      onlineClient.cancelMatch(onlineRoomId);
+    }
+
+    if (cancelType === "queue") {
+      onlineClient.cancelQueue();
+    }
+
+    resetOnlineMatchState();
+    setScreen("home");
+  }
+
   useEffect(() => {
-    const clearStartTimeout = () => {
-      if (startGameTimeoutRef.current) {
-        clearTimeout(startGameTimeoutRef.current);
-        startGameTimeoutRef.current = null;
+    const unsubBalanceUpdate = onlineClient.on("balanceUpdate", (payload) => {
+      if (payload.playerId === playerProfile.playerId) {
+        setBalance(payload.balance);
       }
-    };
+    });
 
     const unsubMatchFound = onlineClient.on("matchFound", (payload) => {
-      clearStartTimeout();
+      clearStartGameTimeout();
       setOnlineRoomId(payload.roomId);
       setOnlineOpponent(payload.opponent);
       setAcceptedPlayerIds([]);
-      setScreen("found");
+      setScreen("searching");
     });
 
     const unsubMatchAcceptUpdate = onlineClient.on("matchAcceptUpdate", (payload) => {
@@ -63,7 +94,7 @@ export default function App() {
     });
 
     const unsubMatchReady = onlineClient.on("matchReady", (payload) => {
-      clearStartTimeout();
+      clearStartGameTimeout();
       setOnlineRoomId(payload.roomId);
       setOnlineOpponent(payload.opponent);
       setOnlineInitialRoundPlan(payload.roundPlan);
@@ -74,26 +105,21 @@ export default function App() {
     });
 
     const unsubMatchCancelled = onlineClient.on("matchCancelled", () => {
-      clearStartTimeout();
-      setOnlineRoomId(null);
-      setOnlineOpponent(null);
-      setOnlineInitialRoundPlan(null);
-      setAcceptedPlayerIds([]);
+      clearStartGameTimeout();
+      resetOnlineMatchState();
       setScreen("home");
     });
 
     const unsubOpponentLeft = onlineClient.on("opponentLeft", () => {
-      clearStartTimeout();
-      setOnlineRoomId(null);
-      setOnlineOpponent(null);
-      setOnlineInitialRoundPlan(null);
-      setAcceptedPlayerIds([]);
+      clearStartGameTimeout();
+      resetOnlineMatchState();
       setScreen("home");
     });
 
     return () => {
-      clearStartTimeout();
+      clearStartGameTimeout();
       unsubMatchFound();
+      unsubBalanceUpdate();
       unsubMatchAcceptUpdate();
       unsubMatchReady();
       unsubMatchCancelled();
@@ -103,10 +129,7 @@ export default function App() {
 
   async function handlePlay() {
     setGameMode("online");
-    setOnlineOpponent(null);
-    setOnlineInitialRoundPlan(null);
-    setOnlineRoomId(null);
-    setAcceptedPlayerIds([]);
+    resetOnlineMatchState();
 
     try {
       await onlineClient.joinQueue(playerProfile);
@@ -116,11 +139,13 @@ export default function App() {
     }
   }
 
+  function handleChangeSlipper() {
+    rerollPlayerSlipper(telegramUser);
+    forcePlayerProfileRefresh((value) => value + 1);
+  }
+
   function startTrainingNow() {
-    if (startGameTimeoutRef.current) {
-      clearTimeout(startGameTimeoutRef.current);
-      startGameTimeoutRef.current = null;
-    }
+    clearStartGameTimeout();
 
     if (onlineRoomId) {
       onlineClient.cancelMatch(onlineRoomId);
@@ -129,11 +154,18 @@ export default function App() {
     }
 
     setGameMode("training");
-    setOnlineRoomId(null);
-    setOnlineOpponent(null);
-    setOnlineInitialRoundPlan(null);
-    setAcceptedPlayerIds([]);
+    resetOnlineMatchState();
     setScreen("game");
+  }
+
+  function handleAcceptFound() {
+    if (!onlineRoomId) return;
+
+    setAcceptedPlayerIds((prev) => {
+      if (prev.includes(playerProfile.playerId)) return prev;
+      return [...prev, playerProfile.playerId];
+    });
+    onlineClient.acceptMatch(onlineRoomId);
   }
 
   if (screen === "home")
@@ -141,70 +173,41 @@ export default function App() {
       <Home
         onlineWsUrl={ONLINE_WS_URL}
         slipperSrc={playerProfile.slipper}
+        balance={balance}
         onTraining={startTrainingNow}
+        onChangeSlipper={handleChangeSlipper}
         onPlay={handlePlay}
       />
     );
 
   if (screen === "searching")
     return (
-      <Searching
-        autoFind={false}
-        slipperSrc={playerProfile.slipper}
-        onTraining={startTrainingNow}
-        onCancel={() => {
-          if (startGameTimeoutRef.current) {
-            clearTimeout(startGameTimeoutRef.current);
-            startGameTimeoutRef.current = null;
-          }
-          onlineClient.cancelQueue();
-          setOnlineOpponent(null);
-          setOnlineInitialRoundPlan(null);
-          setOnlineRoomId(null);
-          setAcceptedPlayerIds([]);
-          setScreen("home");
-        }}
-        onFound={() => setScreen("found")}
-      />
-    );
+      <>
+        <Searching
+          slipperSrc={playerProfile.slipper}
+          balance={balance}
+          onTraining={startTrainingNow}
+          onChangeSlipper={handleChangeSlipper}
+          onlineWsUrl={ONLINE_WS_URL}
+          isFound={Boolean(onlineRoomId && onlineOpponent)}
+          onCancel={() => leaveSearchingToHome("queue")}
+        />
 
-  if (screen === "found")
-    return (
-      <Found
-        onAccept={() => {
-          if (onlineRoomId) {
-            onlineClient.acceptMatch(onlineRoomId);
-            return;
-          }
-
-          setScreen("game");
-        }}
-        onClose={() => {
-          if (startGameTimeoutRef.current) {
-            clearTimeout(startGameTimeoutRef.current);
-            startGameTimeoutRef.current = null;
-          }
-          if (onlineRoomId) {
-            onlineClient.cancelMatch(onlineRoomId);
-          }
-          setOnlineOpponent(null);
-          setOnlineInitialRoundPlan(null);
-          setOnlineRoomId(null);
-          setAcceptedPlayerIds([]);
-          setScreen("home");
-        }}
-        playerName={playerProfile.name}
-        playerProfileAvatar={playerProfile.avatarUrl ?? undefined}
-        playerSlipper={playerProfile.slipper}
-        opponentName={onlineOpponent?.name}
-        opponentAvatar={onlineOpponent?.avatarUrl ?? undefined}
-        opponentSlipper={onlineOpponent?.slipper}
-        playerAccepted={acceptedPlayerIds.includes(playerProfile.playerId)}
-        opponentAccepted={Boolean(
-          onlineOpponent && acceptedPlayerIds.includes(onlineOpponent.playerId)
-        )}
-        onTraining={startTrainingNow}
-      />
+        {onlineRoomId && onlineOpponent ? (
+          <Found
+            onAccept={handleAcceptFound}
+            onClose={() => leaveSearchingToHome("match")}
+            playerName={playerProfile.name}
+            playerProfileAvatar={playerProfile.avatarUrl ?? undefined}
+            playerSlipper={playerProfile.slipper}
+            opponentName={onlineOpponent.name}
+            opponentAvatar={onlineOpponent.avatarUrl ?? undefined}
+            opponentSlipper={onlineOpponent.slipper}
+            playerAccepted={acceptedPlayerIds.includes(playerProfile.playerId)}
+            opponentAccepted={acceptedPlayerIds.includes(onlineOpponent.playerId)}
+          />
+        ) : null}
+      </>
     );
 
   if (screen === "game")
@@ -215,6 +218,8 @@ export default function App() {
         onlineOpponentName={onlineOpponent?.name}
         onlineOpponentAvatar={onlineOpponent?.avatarUrl ?? undefined}
         onlineOpponentSlipper={onlineOpponent?.slipper}
+        onlineOpponentPlayerId={onlineOpponent?.playerId}
+        playerId={playerProfile.playerId}
         playerSlipper={playerProfile.slipper}
         initialOnlineRoundPlan={onlineInitialRoundPlan ?? undefined}
         user={telegramUser}

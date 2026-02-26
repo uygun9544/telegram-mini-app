@@ -1,8 +1,63 @@
 import { WebSocket, WebSocketServer } from "ws";
 import crypto from "node:crypto";
 import http from "node:http";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const PORT = Number(process.env.PORT || 8787);
+const DEFAULT_BALANCE = 300;
+const WIN_REWARD = 5;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const dataDirPath = path.join(__dirname, "data");
+const balanceFilePath = path.join(dataDirPath, "balances.json");
+
+function ensureBalanceStorage() {
+  if (!fs.existsSync(dataDirPath)) {
+    fs.mkdirSync(dataDirPath, { recursive: true });
+  }
+
+  if (!fs.existsSync(balanceFilePath)) {
+    fs.writeFileSync(balanceFilePath, "{}", "utf-8");
+  }
+}
+
+function loadBalances() {
+  ensureBalanceStorage();
+
+  try {
+    const raw = fs.readFileSync(balanceFilePath, "utf-8");
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function saveBalances(balances) {
+  ensureBalanceStorage();
+  fs.writeFileSync(balanceFilePath, JSON.stringify(balances, null, 2), "utf-8");
+}
+
+const playerBalances = loadBalances();
+
+function ensurePlayerBalance(playerId) {
+  if (typeof playerBalances[playerId] !== "number") {
+    playerBalances[playerId] = DEFAULT_BALANCE;
+    saveBalances(playerBalances);
+  }
+
+  return playerBalances[playerId];
+}
+
+function adjustPlayerBalance(playerId, delta) {
+  const current = ensurePlayerBalance(playerId);
+  const next = current + delta;
+  playerBalances[playerId] = next;
+  saveBalances(playerBalances);
+  return next;
+}
 
 const server = http.createServer((req, res) => {
   if (req.url === "/health") {
@@ -12,6 +67,7 @@ const server = http.createServer((req, res) => {
       queueSize: queue.length,
       activeRooms: rooms.size,
       connectedClients: clients.size,
+      trackedPlayers: Object.keys(playerBalances).length,
       timestamp: new Date().toISOString()
     };
 
@@ -145,7 +201,8 @@ function tryMatchmake() {
       players: [playerA, playerB],
       accepted: new Set(),
       rounds: new Map(),
-      roundPlans: new Map()
+      roundPlans: new Map(),
+      resultApplied: false
     };
 
     rooms.set(roomId, room);
@@ -201,6 +258,14 @@ wss.on("connection", (ws) => {
       client.playerId = profile.playerId || clientId;
       client.avatarUrl = profile.avatarUrl || null;
       client.slipper = profile.slipper || "/green.png";
+
+      const balance = ensurePlayerBalance(client.playerId);
+
+      send(client.ws, {
+        type: "balance_sync",
+        playerId: client.playerId,
+        balance
+      });
 
       removeFromQueue(clientId);
       queue.push(clientId);
@@ -307,6 +372,59 @@ wss.on("connection", (ws) => {
           nextRoundPlan
         });
       }
+      return;
+    }
+
+    if (message.type === "match_result") {
+      const room = rooms.get(message.roomId);
+      if (!room || !room.players.includes(clientId)) return;
+
+      if (room.resultApplied) {
+        const currentBalance = ensurePlayerBalance(client.playerId || clientId);
+        send(client.ws, {
+          type: "balance_update",
+          playerId: client.playerId || clientId,
+          balance: currentBalance
+        });
+        return;
+      }
+
+      const winnerPlayerId = message.winnerPlayerId;
+      const roomClients = room.players
+        .map((id) => clients.get(id))
+        .filter(Boolean);
+
+      const winnerClient = roomClients.find((roomClient) => roomClient.playerId === winnerPlayerId);
+      if (!winnerClient) return;
+
+      const loserClient = roomClients.find((roomClient) => roomClient.playerId !== winnerPlayerId);
+      if (!loserClient) return;
+
+      const winnerBalance = adjustPlayerBalance(winnerClient.playerId, WIN_REWARD);
+      const loserBalance = adjustPlayerBalance(loserClient.playerId, -WIN_REWARD);
+
+      send(winnerClient.ws, {
+        type: "balance_update",
+        playerId: winnerClient.playerId,
+        balance: winnerBalance
+      });
+
+      send(loserClient.ws, {
+        type: "balance_update",
+        playerId: loserClient.playerId,
+        balance: loserBalance
+      });
+
+      room.resultApplied = true;
+
+      room.players.forEach((roomClientId) => {
+        const roomClient = clients.get(roomClientId);
+        if (roomClient && roomClient.roomId === room.id) {
+          roomClient.roomId = null;
+        }
+      });
+
+      rooms.delete(room.id);
       return;
     }
 

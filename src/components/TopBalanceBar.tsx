@@ -1,11 +1,12 @@
 interface TopBalanceBarProps {
   onTraining: () => void;
+  balance: number;
 }
 
-export default function TopBalanceBar({ onTraining }: TopBalanceBarProps) {
+export default function TopBalanceBar({ onTraining, balance }: TopBalanceBarProps) {
   return (
     <div className="balance balance-row">
-      <span>Баланс: 300 ⭐</span>
+      <span>Баланс: {balance} ⭐</span>
       <button className="mode-toggle" onClick={onTraining}>Тренировка</button>
     </div>
   );

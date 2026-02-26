@@ -32,6 +32,8 @@ interface GameProps {
   onlineOpponentName?: string;
   onlineOpponentAvatar?: string;
   onlineOpponentSlipper?: string;
+  onlineOpponentPlayerId?: string;
+  playerId: string;
   playerSlipper: string;
   initialOnlineRoundPlan?: RoundPlan;
   onExitToWinner: (data: {
@@ -64,6 +66,8 @@ export default function Game({
   onlineOpponentName,
   onlineOpponentAvatar,
   onlineOpponentSlipper,
+  onlineOpponentPlayerId,
+  playerId,
   playerSlipper,
   initialOnlineRoundPlan,
   mode = "training"
@@ -79,6 +83,8 @@ export default function Game({
 
   const [timer, setTimer] = useState(0);
   const [winnerText, setWinnerText] = useState<string | null>(null);
+  const [roundHitOwner, setRoundHitOwner] = useState<"player" | "enemy" | null>(null);
+  const [roundHitVersion, setRoundHitVersion] = useState(0);
 
   const [uiPlayerState, setUiPlayerState] = useState<PlayerState>(null);
   const [uiEnemyState, setUiEnemyState] = useState<PlayerState>(null);
@@ -99,6 +105,7 @@ export default function Game({
   const gameAreaRef = useRef<HTMLDivElement | null>(null);
   const markerIdRef = useRef(0);
   const onlineRoundPlansRef = useRef<Record<number, RoundPlan>>({});
+  const startRoundRef = useRef<() => void>(() => {});
 
   const playerName = getTelegramPlayerName(user);
 
@@ -111,8 +118,10 @@ export default function Game({
     onlineRoundPlansRef.current[initialOnlineRoundPlan.round] = initialOnlineRoundPlan;
   }, [initialOnlineRoundPlan]);
 
+  startRoundRef.current = startRound;
+
   useEffect(() => {
-    startRound();
+    startRoundRef.current();
   }, [round, mode]);
 
   useEffect(() => {
@@ -140,6 +149,7 @@ export default function Game({
 
   function setupRoundState() {
     setWinnerText(null);
+    setRoundHitOwner(null);
     setUiPlayerState(null);
     setUiEnemyState(null);
     setUiPlayerTime(null);
@@ -433,9 +443,18 @@ export default function Game({
     }
 
     if (result === "player") {
+      setRoundHitOwner("player");
+      setRoundHitVersion((value) => value + 1);
       setPlayerWins(prev => {
         const updated = prev + 1;
         if (updated === 3) {
+          if (mode === "online" && onlineRoomId) {
+            onlineClient.reportMatchResult({
+              roomId: onlineRoomId,
+              winnerPlayerId: playerId
+            });
+          }
+
           setTimeout(() => {
             onExitToWinner({
               winner: "player",
@@ -452,9 +471,18 @@ export default function Game({
     }
 
     else if (result === "enemy") {
+      setRoundHitOwner("enemy");
+      setRoundHitVersion((value) => value + 1);
       setEnemyWins(prev => {
         const updated = prev + 1;
         if (updated === 3) {
+          if (mode === "online" && onlineRoomId && onlineOpponentPlayerId) {
+            onlineClient.reportMatchResult({
+              roomId: onlineRoomId,
+              winnerPlayerId: onlineOpponentPlayerId
+            });
+          }
+
           setTimeout(() => {
             onExitToWinner({
               winner: "enemy",
@@ -520,18 +548,28 @@ export default function Game({
         </div>
       </div>
 
-      <div className="round-box">
-        <h2>Раунд {round}</h2>
-        <p>Нажмите в порядке</p>
-        <div className="big-order order-preview">
-          <span
-            className={`square order-square ${order[0]?.name || ""}`}
-          />
-          <span className="order-arrow">→</span>
-          <span
-            className={`square order-square ${order[1]?.name || ""}`}
-          />
+      <div className="round-box-wrap">
+        <div className={`round-box ${roundHitOwner ? "hit" : ""}`}>
+          <h2>Раунд {round}</h2>
+          <p>Нажмите в порядке</p>
+          <div className="big-order order-preview">
+            <span
+              className={`square order-square ${order[0]?.name || ""}`}
+            />
+            <span className="order-arrow">→</span>
+            <span
+              className={`square order-square ${order[1]?.name || ""}`}
+            />
+          </div>
         </div>
+
+        {roundHitOwner && (
+          <img
+            key={roundHitVersion}
+            src={roundHitOwner === "player" ? playerSlipper : enemySlipper}
+            className={`round-hit-slipper ${roundHitOwner}`}
+          />
+        )}
       </div>
 
       <div className="main-timer">{formatTime(timer)}</div>

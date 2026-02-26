@@ -1,7 +1,18 @@
 declare global {
   interface Window {
-    Telegram: any;
+    Telegram?: TelegramGlobal;
   }
+}
+
+interface TelegramWebApp {
+  ready: () => void;
+  initDataUnsafe?: {
+    user?: TelegramUser;
+  };
+}
+
+interface TelegramGlobal {
+  WebApp?: TelegramWebApp;
 }
 
 export interface TelegramUser {
