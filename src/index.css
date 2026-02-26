@@ -146,6 +146,22 @@ button {
   padding-left: 26px;
 }
 
+.balance-skeleton {
+  display: inline-block;
+  width: 64px;
+  height: 20px;
+  vertical-align: middle;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.12) 100%
+  );
+  background-size: 220% 100%;
+  animation: searchShimmer 1.4s ease-in-out infinite;
+}
+
 .mode-toggle {
   border: 0;
   border-radius: 999px;

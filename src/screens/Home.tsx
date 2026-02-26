@@ -6,7 +6,7 @@ interface HomeProps {
   onChangeSlipper: () => void;
   onlineWsUrl: string;
   slipperSrc: string;
-  balance: number;
+  balance: number | null;
 }
 
 export default function Home({

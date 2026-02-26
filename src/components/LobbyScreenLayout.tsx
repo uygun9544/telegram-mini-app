@@ -4,7 +4,7 @@ import TopBalanceBar from "./TopBalanceBar";
 
 interface LobbyScreenLayoutProps {
   screenClassName: string;
-  balance: number;
+  balance: number | null;
   onlineWsUrl: string;
   slipperSrc: string;
   onTraining: () => void;

@@ -19,7 +19,7 @@ type Screen = "home" | "searching" | "game" | "winner";
 export default function App() {
   const [screen, setScreen] = useState<Screen>("home");
   const [, forcePlayerProfileRefresh] = useState(0);
-  const [balance, setBalance] = useState(300);
+  const [balance, setBalance] = useState<number | null>(null);
   const [gameMode, setGameMode] = useState<GameMode>("training");
   const [onlineRoomId, setOnlineRoomId] = useState<string | null>(null);
   const [onlineOpponent, setOnlineOpponent] = useState<PlayerProfile | null>(null);

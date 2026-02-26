@@ -6,7 +6,7 @@ interface SearchingProps {
   onTraining: () => void;
   onChangeSlipper: () => void;
   onlineWsUrl: string;
-  balance: number;
+  balance: number | null;
   isFound: boolean;
 }
 
