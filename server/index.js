@@ -8,11 +8,43 @@ import { fileURLToPath } from "node:url";
 const PORT = Number(process.env.PORT || 8787);
 const DEFAULT_BALANCE = 300;
 const WIN_REWARD = 5;
+const TRAINING_CONFIG_ADMIN_TOKEN = process.env.TRAINING_CONFIG_ADMIN_TOKEN || "";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const dataDirPath = path.join(__dirname, "data");
 const balanceFilePath = path.join(dataDirPath, "balances.json");
+const trainingConfigFilePath = path.join(dataDirPath, "training-config.json");
+
+const DEFAULT_TRAINING_BOT_CONFIG = {
+  reactionMinMs: 500,
+  reactionMaxMs: 2300,
+  missChance: 0.25
+};
+
+function normalizeTrainingBotConfig(raw) {
+  const minCandidate = Number(raw?.reactionMinMs);
+  const maxCandidate = Number(raw?.reactionMaxMs);
+  const missChanceCandidate = Number(raw?.missChance);
+
+  const reactionMinMs = Number.isFinite(minCandidate)
+    ? Math.max(0, Math.floor(minCandidate))
+    : DEFAULT_TRAINING_BOT_CONFIG.reactionMinMs;
+
+  const reactionMaxMs = Number.isFinite(maxCandidate)
+    ? Math.max(reactionMinMs, Math.floor(maxCandidate))
+    : DEFAULT_TRAINING_BOT_CONFIG.reactionMaxMs;
+
+  const missChance = Number.isFinite(missChanceCandidate)
+    ? Math.min(Math.max(missChanceCandidate, 0), 1)
+    : DEFAULT_TRAINING_BOT_CONFIG.missChance;
+
+  return {
+    reactionMinMs,
+    reactionMaxMs,
+    missChance
+  };
+}
 
 function ensureBalanceStorage() {
   if (!fs.existsSync(dataDirPath)) {
@@ -21,6 +53,14 @@ function ensureBalanceStorage() {
 
   if (!fs.existsSync(balanceFilePath)) {
     fs.writeFileSync(balanceFilePath, "{}", "utf-8");
+  }
+
+  if (!fs.existsSync(trainingConfigFilePath)) {
+    fs.writeFileSync(
+      trainingConfigFilePath,
+      JSON.stringify(DEFAULT_TRAINING_BOT_CONFIG, null, 2),
+      "utf-8"
+    );
   }
 }
 
@@ -40,7 +80,65 @@ function saveBalances(balances) {
   fs.writeFileSync(balanceFilePath, JSON.stringify(balances, null, 2), "utf-8");
 }
 
+function loadTrainingBotConfig() {
+  ensureBalanceStorage();
+
+  try {
+    const raw = fs.readFileSync(trainingConfigFilePath, "utf-8");
+    const parsed = JSON.parse(raw);
+    return normalizeTrainingBotConfig(parsed);
+  } catch {
+    return DEFAULT_TRAINING_BOT_CONFIG;
+  }
+}
+
+function saveTrainingBotConfig(config) {
+  const normalized = normalizeTrainingBotConfig(config);
+  ensureBalanceStorage();
+  fs.writeFileSync(trainingConfigFilePath, JSON.stringify(normalized, null, 2), "utf-8");
+  return normalized;
+}
+
+function writeJson(res, statusCode, payload) {
+  res.writeHead(statusCode, {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, X-Admin-Token"
+  });
+  res.end(JSON.stringify(payload));
+}
+
+function readJsonBody(req) {
+  return new Promise((resolve, reject) => {
+    let raw = "";
+
+    req.on("data", (chunk) => {
+      raw += chunk.toString();
+      if (raw.length > 1024 * 16) {
+        reject(new Error("Payload too large"));
+      }
+    });
+
+    req.on("end", () => {
+      if (!raw) {
+        resolve({});
+        return;
+      }
+
+      try {
+        resolve(JSON.parse(raw));
+      } catch {
+        reject(new Error("Invalid JSON"));
+      }
+    });
+
+    req.on("error", reject);
+  });
+}
+
 const playerBalances = loadBalances();
+let trainingBotConfig = loadTrainingBotConfig();
 
 function ensurePlayerBalance(playerId) {
   if (typeof playerBalances[playerId] !== "number") {
@@ -59,7 +157,73 @@ function adjustPlayerBalance(playerId, delta) {
   return next;
 }
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
+  if (req.url?.startsWith("/training-config")) {
+    if (req.method === "OPTIONS") {
+      res.writeHead(204, {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, X-Admin-Token"
+      });
+      res.end();
+      return;
+    }
+
+    if (req.method === "GET") {
+      writeJson(res, 200, {
+        ok: true,
+        config: trainingBotConfig
+      });
+      return;
+    }
+
+    if (req.method === "POST") {
+      if (!TRAINING_CONFIG_ADMIN_TOKEN) {
+        writeJson(res, 503, {
+          ok: false,
+          message: "TRAINING_CONFIG_ADMIN_TOKEN is not configured"
+        });
+        return;
+      }
+
+      const adminToken = req.headers["x-admin-token"];
+
+      if (adminToken !== TRAINING_CONFIG_ADMIN_TOKEN) {
+        writeJson(res, 401, {
+          ok: false,
+          message: "Unauthorized"
+        });
+        return;
+      }
+
+      try {
+        const body = await readJsonBody(req);
+        trainingBotConfig = saveTrainingBotConfig({
+          ...trainingBotConfig,
+          ...body
+        });
+
+        writeJson(res, 200, {
+          ok: true,
+          config: trainingBotConfig
+        });
+      } catch (error) {
+        writeJson(res, 400, {
+          ok: false,
+          message: error instanceof Error ? error.message : "Invalid request"
+        });
+      }
+
+      return;
+    }
+
+    writeJson(res, 405, {
+      ok: false,
+      message: "Method not allowed"
+    });
+    return;
+  }
+
   if (req.url === "/health") {
     const payload = {
       ok: true,
@@ -68,6 +232,7 @@ const server = http.createServer((req, res) => {
       activeRooms: rooms.size,
       connectedClients: clients.size,
       trackedPlayers: Object.keys(playerBalances).length,
+      trainingBotConfig,
       timestamp: new Date().toISOString()
     };
 
@@ -282,7 +447,7 @@ wss.on("connection", (ws) => {
       const room = rooms.get(message.roomId);
       if (!room || !room.players.includes(clientId)) return;
 
-      room.accepted.add(clientId);
+      room.accepted.add(client.playerId);
 
       notifyRoomBoth(room, {
         type: "match_accept_update",

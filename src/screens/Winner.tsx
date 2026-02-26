@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import MatchPlayerCard from "../components/MatchPlayerCard";
 
 interface WinnerProps {
@@ -17,25 +18,44 @@ export default function Winner({
   reward,
   onExit,
 }: WinnerProps) {
+  const [isWinnerTopVisible, setIsWinnerTopVisible] = useState(false);
 
   const isYouWinner = winner === "player";
 
   const resultTitle = isYouWinner ? "Вы выиграли" : "Вы проиграли";
   const rewardBadge = isYouWinner ? `+${reward}⭐` : `-${reward}⭐`;
 
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      setIsWinnerTopVisible(true);
+    }, 900);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, []);
+
   return (
     <div className="winner-screen">
-      <div className="winner-top">
-        <h4 className="winner-heading">
-          <span className="winner-heading-line">Победитель 👑</span>
-        </h4>
+      <img
+        src={playerAvatar}
+        className={`winner-hit-slipper ${isYouWinner ? "player" : "enemy"}`}
+      />
 
-        <MatchPlayerCard
-          slipperSrc={playerAvatar}
-          name={playerName}
-          avatarSrc={playerProfileAvatar}
-        />
-      </div>
+      {isWinnerTopVisible ? (
+        <div className="winner-top">
+          <h4 className="winner-heading">
+            <span className="winner-heading-line">Победитель 👑</span>
+          </h4>
+
+          <MatchPlayerCard
+            slipperSrc={playerAvatar}
+            name={playerName}
+            avatarSrc={playerProfileAvatar}
+            className="winner-player-card"
+          />
+        </div>
+      ) : null}
 
       <div className="winner-bottom">
         <div className={`result-block ${isYouWinner ? "win" : "lose"}`}>

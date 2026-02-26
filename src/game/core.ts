@@ -37,8 +37,20 @@ export function generatePositions(): [Position, Position] {
   return [p1, p2];
 }
 
-export function formatTime(seconds: number): string {
-  const m = String(Math.floor(seconds / 60)).padStart(2, "0");
-  const s = String(seconds % 60).padStart(2, "0");
+export function formatTime(totalSeconds: number): string {
+  const m = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+  const s = String(totalSeconds % 60).padStart(2, "0");
   return `${m}:${s}`;
+}
+
+export function formatTimeFromMs(milliseconds: number): string {
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  return formatTime(totalSeconds);
+}
+
+export function formatTimeWithCentiseconds(milliseconds: number): string {
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const centiseconds = Math.floor((milliseconds % 1000) / 10);
+  const base = formatTime(totalSeconds);
+  return `${base}:${String(centiseconds).padStart(2, "0")}`;
 }

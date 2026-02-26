@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import {
-  formatTime,
+  formatTimeWithCentiseconds,
   generatePositions,
   getRandomPair,
   randomDelay
@@ -81,7 +81,7 @@ export default function Game({
   const [positions, setPositions] = useState<[Position, Position] | []>([]);
   const [visible, setVisible] = useState(false);
 
-  const [timer, setTimer] = useState(0);
+  const [timerMs, setTimerMs] = useState(0);
   const [winnerText, setWinnerText] = useState<string | null>(null);
   const [roundHitOwner, setRoundHitOwner] = useState<"player" | "enemy" | null>(null);
   const [roundHitVersion, setRoundHitVersion] = useState(0);
@@ -102,6 +102,7 @@ export default function Game({
   const enemyPendingRef = useRef(false);
   const roundTokenRef = useRef(0);
   const squareAppearTimeRef = useRef(0);
+  const timerStartRef = useRef(0);
   const gameAreaRef = useRef<HTMLDivElement | null>(null);
   const markerIdRef = useRef(0);
   const onlineRoundPlansRef = useRef<Record<number, RoundPlan>>({});
@@ -173,12 +174,12 @@ export default function Game({
 
     setupRoundState();
     setVisible(false);
-    setTimer(0);
+    setTimerMs(0);
 
-    const roundStart = Date.now();
+    timerStartRef.current = Date.now();
     uiTimerRef.current = window.setInterval(() => {
-      setTimer(Math.floor((Date.now() - roundStart) / 1000));
-    }, 1000);
+      setTimerMs(Date.now() - timerStartRef.current);
+    }, 10);
 
     let revealDelayMs = randomDelay();
     let actionWindowMs = 20000;
@@ -526,6 +527,16 @@ export default function Game({
           ? `Время ${enemyName}: ${uiEnemyTime} мс`
           : "\u00A0";
 
+  const mainTimerText = formatTimeWithCentiseconds(timerMs);
+  const separatorIndex = mainTimerText.lastIndexOf(":");
+  const timerMainPartRaw = separatorIndex >= 0
+    ? mainTimerText.slice(0, separatorIndex)
+    : mainTimerText;
+  const timerFractionPart = separatorIndex >= 0
+    ? mainTimerText.slice(separatorIndex + 1)
+    : "00";
+  const timerMainPart = timerMainPartRaw.replace(":", " : ");
+
   return (
     <div className="game-screen">
       <div className="top-bar">
@@ -551,7 +562,7 @@ export default function Game({
       <div className="round-box-wrap">
         <div className={`round-box ${roundHitOwner ? "hit" : ""}`}>
           <h2>Раунд {round}</h2>
-          <p>Нажмите в порядке</p>
+          <p className="round-hint">Нажмите быстрее всех в таком порядке</p>
           <div className="big-order order-preview">
             <span
               className={`square order-square ${order[0]?.name || ""}`}
@@ -572,7 +583,12 @@ export default function Game({
         )}
       </div>
 
-      <div className="main-timer">{formatTime(timer)}</div>
+      <div className="main-timer">
+        <span>{timerMainPart}</span>
+        <span className={`main-timer-fraction ${visible ? "active" : ""}`}>
+          {` : ${timerFractionPart}`}
+        </span>
+      </div>
 
       {winnerText && (
         <div className="winner-popup">{winnerText}</div>

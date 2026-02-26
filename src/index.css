@@ -489,10 +489,16 @@ button {
   line-height: var(--text-2-line);
 }
 
+.round-box .round-hint {
+  opacity: 0.5;
+  font-size: var(--text-3-size);
+  line-height: var(--text-3-line);
+}
+
 .round-hit-slipper {
   position: absolute;
-  width: 129px;
-  height: 129px;
+  width: 168px;
+  height: 168px;
   object-fit: contain;
   pointer-events: none;
   opacity: 0;
@@ -531,6 +537,15 @@ button {
   opacity: 0.85;
   font-size: var(--text-1-size);
   line-height: var(--text-1-line);
+}
+
+.main-timer-fraction {
+  opacity: 0.28;
+  transition: opacity 0.2s ease;
+}
+
+.main-timer-fraction.active {
+  opacity: 1;
 }
 
 .winner-popup {
@@ -629,6 +644,27 @@ button {
   padding: 40px 20px 20px;
   align-items: center;
   text-align: center;
+  position: relative;
+}
+
+.winner-hit-slipper {
+  position: fixed;
+  width: 291px;
+  height: 291px;
+  object-fit: contain;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 101;
+  left: 50%;
+  top: 68%;
+}
+
+.winner-hit-slipper.player {
+  animation: winnerSlipperImpactLeft 0.9s ease-out;
+}
+
+.winner-hit-slipper.enemy {
+  animation: winnerSlipperImpactRight 0.9s ease-out;
 }
 
 .winner-top {
@@ -636,10 +672,25 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
+  animation: winnerTopFadeIn 0.25s ease-out;
 }
 
 .winner-top .player-card {
   margin-top: 16px;
+}
+
+.winner-top .player-card.winner-player-card {
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(var(--color-surface-2), var(--color-surface-2)) padding-box,
+    linear-gradient(
+      120deg,
+      rgba(255, 255, 255, 0.03),
+      rgba(255, 255, 255, 0.25),
+      rgba(255, 255, 255, 0.03)
+    ) border-box;
+  background-size: 100% 100%, 220% 220%;
+  animation: winnerCardBorderFlow 6.4s ease-in-out infinite;
 }
 
 .winner-slipper-card {
@@ -809,5 +860,69 @@ button {
 
   100% {
     background-position: 0% 50%;
+  }
+}
+
+@keyframes winnerSlipperImpactLeft {
+  0% {
+    opacity: 0;
+    transform: translate(calc(-50% - 84px), calc(-50% - 18px)) rotate(-24deg) scale(1.1);
+  }
+  35% {
+    opacity: 1;
+    transform: translate(calc(-50% + 12px), calc(-50% + 8px)) rotate(9deg) scale(0.94);
+  }
+  65% {
+    opacity: 1;
+    transform: translate(calc(-50% - 3px), calc(-50% + 1px)) rotate(-3deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% - 12px), calc(-50% - 3px)) rotate(-7deg) scale(1.03);
+  }
+}
+
+@keyframes winnerSlipperImpactRight {
+  0% {
+    opacity: 0;
+    transform: translate(calc(-50% + 84px), calc(-50% - 18px)) rotate(24deg) scale(1.1);
+  }
+  35% {
+    opacity: 1;
+    transform: translate(calc(-50% - 12px), calc(-50% + 8px)) rotate(-9deg) scale(0.94);
+  }
+  65% {
+    opacity: 1;
+    transform: translate(calc(-50% + 3px), calc(-50% + 1px)) rotate(3deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + 12px), calc(-50% - 3px)) rotate(7deg) scale(1.03);
+  }
+}
+
+@keyframes winnerTopFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes winnerCardBorderFlow {
+  0% {
+    background-position: 0 0, 0% 50%;
+  }
+
+  50% {
+    background-position: 0 0, 100% 50%;
+  }
+
+  100% {
+    background-position: 0 0, 0% 50%;
   }
 }

@@ -26,6 +26,36 @@ npm start
 
 - `http://localhost:8787/health`
 
+## Динамическая настройка бота тренировки (без перезаливки фронта)
+
+Теперь значения бота тренировки можно менять удалённо через сервер:
+
+- `GET /training-config` — получить текущие значения
+- `POST /training-config` — обновить значения
+
+Поддерживаемые поля:
+
+- `reactionMinMs`
+- `reactionMaxMs`
+- `missChance` (0..1)
+
+Для `POST` обязательно задай env-переменную на Render:
+
+```bash
+TRAINING_CONFIG_ADMIN_TOKEN=your_secret_token
+```
+
+Пример обновления (без деплоя фронта):
+
+```bash
+curl -X POST https://your-render-domain/training-config \
+	-H "Content-Type: application/json" \
+	-H "X-Admin-Token: your_secret_token" \
+	-d '{"reactionMinMs":500,"reactionMaxMs":2300,"missChance":0.25}'
+```
+
+Фронтенд подхватывает эти значения автоматически (периодический рефреш).
+
 ## Настройка URL сервера для фронта
 
 Создай `.env` в корне фронта:

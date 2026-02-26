@@ -1,13 +1,20 @@
 import type { EnemyTurnPlan, Position } from "../types";
+import {
+  getTrainingBotConfig,
+  randomTrainingBotReactionMs,
+} from "../trainingConfig";
 
 export function createTrainingEnemyTurnPlan(
   positions: [Position, Position] | []
 ): EnemyTurnPlan {
-  if (Math.random() < 0.25) {
+  const trainingBotConfig = getTrainingBotConfig();
+  const reactionMs = randomTrainingBotReactionMs(trainingBotConfig);
+
+  if (Math.random() < trainingBotConfig.missChance) {
     return {
       state: "miss",
       time: null,
-      decisionDelayMs: 1200,
+      decisionDelayMs: reactionMs,
       markers: [
         {
           top: Math.random() * 88 + 6,
@@ -34,8 +41,8 @@ export function createTrainingEnemyTurnPlan(
 
   return {
     state: "success",
-    time: Math.floor(300 + Math.random() * 500),
-    decisionDelayMs: 1200,
+    time: reactionMs,
+    decisionDelayMs: reactionMs,
     markers: successMarkers
   };
 }

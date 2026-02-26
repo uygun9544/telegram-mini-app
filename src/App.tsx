@@ -5,6 +5,7 @@ import Found from "./screens/Found";
 import Game from "./screens/Game";
 import Winner from "./screens/Winner";
 import type { GameMode } from "./game/types";
+import { startTrainingBotConfigAutoRefresh } from "./game/trainingConfig";
 import type { PlayerProfile, RoundPlan } from "./online/types";
 import { onlineClient, ONLINE_WS_URL } from "./online/client";
 import { getTelegramUser } from "./telegram";
@@ -43,6 +44,14 @@ export default function App() {
     profileAvatar?: string | null;
     reward: number;
   };
+
+  useEffect(() => {
+    const stopTrainingConfigRefresh = startTrainingBotConfigAutoRefresh();
+
+    return () => {
+      stopTrainingConfigRefresh();
+    };
+  }, []);
 
   function clearStartGameTimeout() {
     if (startGameTimeoutRef.current) {
