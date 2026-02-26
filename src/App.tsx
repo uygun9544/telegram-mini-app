@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import Home from "./screens/Home";
 import Searching from "./screens/Searching";
 import Found from "./screens/Found";
@@ -20,12 +21,16 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>("home");
   const [, forcePlayerProfileRefresh] = useState(0);
   const [balance, setBalance] = useState<number | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [gameMode, setGameMode] = useState<GameMode>("training");
   const [onlineRoomId, setOnlineRoomId] = useState<string | null>(null);
   const [onlineOpponent, setOnlineOpponent] = useState<PlayerProfile | null>(null);
   const [onlineInitialRoundPlan, setOnlineInitialRoundPlan] = useState<RoundPlan | null>(null);
   const [acceptedPlayerIds, setAcceptedPlayerIds] = useState<string[]>([]);
   const startGameTimeoutRef = useRef<number | null>(null);
+  const toastTimeoutRef = useRef<number | null>(null);
+  const screenRef = useRef<Screen>("home");
+  const onlineRoomIdRef = useRef<string | null>(null);
   const telegramUser = getTelegramUser();
   const playerProfile = buildOnlinePlayerProfile(telegramUser);
   const playerProfileId = playerProfile.playerId;
@@ -50,12 +55,33 @@ export default function App() {
   };
 
   useEffect(() => {
+    screenRef.current = screen;
+  }, [screen]);
+
+  useEffect(() => {
+    onlineRoomIdRef.current = onlineRoomId;
+  }, [onlineRoomId]);
+
+  useEffect(() => {
     const stopTrainingConfigRefresh = startTrainingBotConfigAutoRefresh();
 
     return () => {
       stopTrainingConfigRefresh();
     };
   }, []);
+
+  function showToast(message: string) {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+      toastTimeoutRef.current = null;
+    }
+
+    setToastMessage(message);
+    toastTimeoutRef.current = window.setTimeout(() => {
+      setToastMessage(null);
+      toastTimeoutRef.current = null;
+    }, 3000);
+  }
 
   useEffect(() => {
     onlineClient.syncBalance({
@@ -113,7 +139,8 @@ export default function App() {
     });
 
     const unsubMatchAcceptUpdate = onlineClient.on("matchAcceptUpdate", (payload) => {
-      if (!onlineRoomId || payload.roomId !== onlineRoomId) return;
+      const currentRoomId = onlineRoomIdRef.current;
+      if (!currentRoomId || payload.roomId !== currentRoomId) return;
       setAcceptedPlayerIds(payload.acceptedPlayerIds);
     });
 
@@ -132,24 +159,41 @@ export default function App() {
       clearStartGameTimeout();
       resetOnlineMatchState();
       setScreen("home");
+      showToast("Игра была прервана соперником");
     });
 
     const unsubOpponentLeft = onlineClient.on("opponentLeft", () => {
       clearStartGameTimeout();
       resetOnlineMatchState();
       setScreen("home");
+      showToast("Игра была прервана соперником");
+    });
+
+    const unsubDisconnected = onlineClient.on("disconnected", () => {
+      const inGame = screenRef.current === "game";
+      if (!inGame && !onlineRoomIdRef.current) return;
+
+      clearStartGameTimeout();
+      resetOnlineMatchState();
+      setScreen("home");
+      showToast("Игра была прервана соперником");
     });
 
     return () => {
       clearStartGameTimeout();
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+        toastTimeoutRef.current = null;
+      }
       unsubMatchFound();
       unsubBalanceUpdate();
       unsubMatchAcceptUpdate();
       unsubMatchReady();
       unsubMatchCancelled();
       unsubOpponentLeft();
+      unsubDisconnected();
     };
-  }, [onlineRoomId, playerProfileId]);
+  }, [playerProfileId]);
 
   async function handlePlay() {
     setGameMode("online");
@@ -192,8 +236,10 @@ export default function App() {
     onlineClient.acceptMatch(onlineRoomId);
   }
 
-  if (screen === "home")
-    return (
+  let screenContent: ReactNode = null;
+
+  if (screen === "home") {
+    screenContent = (
       <Home
         onlineWsUrl={ONLINE_WS_URL}
         slipperSrc={playerProfileSlipper}
@@ -203,9 +249,8 @@ export default function App() {
         onPlay={handlePlay}
       />
     );
-
-  if (screen === "searching")
-    return (
+  } else if (screen === "searching") {
+    screenContent = (
       <>
         <Searching
           slipperSrc={playerProfileSlipper}
@@ -233,9 +278,8 @@ export default function App() {
         ) : null}
       </>
     );
-
-  if (screen === "game")
-    return (
+  } else if (screen === "game") {
+    screenContent = (
       <Game
         mode={gameMode}
         onlineRoomId={onlineRoomId ?? undefined}
@@ -253,9 +297,8 @@ export default function App() {
         }}
       />
     );
-
-  if (screen === "winner" && winnerData)
-    return (
+  } else if (screen === "winner" && winnerData) {
+    screenContent = (
       <Winner
         winner={winnerData.winner}
         playerName={winnerData.name}
@@ -265,6 +308,18 @@ export default function App() {
         onExit={() => setScreen("home")}
       />
     );
+  }
 
-  return null;
+  if (!screenContent) return null;
+
+  return (
+    <>
+      {screenContent}
+      {toastMessage ? (
+        <div className="app-toast" role="status" aria-live="polite">
+          {toastMessage}
+        </div>
+      ) : null}
+    </>
+  );
 }
