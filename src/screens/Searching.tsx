@@ -27,6 +27,7 @@ export default function Searching({
       slipperSrc={slipperSrc || ""}
       onTraining={onTraining}
       onChangeSlipper={onChangeSlipper}
+      isChangeSlipperDisabled
       bottomContent={(
         <div className="search-row">
           <div className="search-box">Идёт поиск игры</div>

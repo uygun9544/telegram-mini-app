@@ -9,6 +9,7 @@ interface LobbyScreenLayoutProps {
   slipperSrc: string;
   onTraining: () => void;
   onChangeSlipper: () => void;
+  isChangeSlipperDisabled?: boolean;
   bottomContent: ReactNode;
 }
 
@@ -19,6 +20,7 @@ export default function LobbyScreenLayout({
   slipperSrc,
   onTraining,
   onChangeSlipper,
+  isChangeSlipperDisabled = false,
   bottomContent
 }: LobbyScreenLayoutProps) {
   return (
@@ -28,7 +30,7 @@ export default function LobbyScreenLayout({
 
       <SlipperCard
         imageSrc={slipperSrc}
-        middleAction={<button className="mode-toggle" onClick={onChangeSlipper}>Поменять</button>}
+        middleAction={<button className="mode-toggle" onClick={onChangeSlipper} disabled={isChangeSlipperDisabled}>Поменять</button>}
       />
 
       {bottomContent}

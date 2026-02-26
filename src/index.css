@@ -159,6 +159,11 @@ button {
   cursor: pointer;
 }
 
+.mode-toggle:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
 .debug-ws {
   margin-top: 8px;
   opacity: 0.15;

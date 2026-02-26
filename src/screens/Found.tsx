@@ -1,3 +1,9 @@
+import MatchPlayerCard from "../components/MatchPlayerCard";
+import {
+  OPPONENT_NAME,
+  OPPONENT_SLIPPER,
+} from "../utils/player";
+
 type FoundProps = {
   onAccept: () => void;
   onClose: () => void;
@@ -10,27 +16,6 @@ type FoundProps = {
   playerAccepted: boolean;
   opponentAccepted: boolean;
 };
-
-function PlayerCard({
-  name,
-  avatar,
-  slipper,
-  accepted,
-}: {
-  name: string;
-  avatar?: string;
-  slipper: string;
-  accepted: boolean;
-}) {
-  return (
-    <div className="found-player-card">
-      <p>{name}</p>
-      {avatar ? <img src={avatar} alt={name} /> : null}
-      <img src={slipper} alt={`${name} slipper`} />
-      <p>{accepted ? "Accepted" : "Waiting..."}</p>
-    </div>
-  );
-}
 
 export default function Found({
   onAccept,
@@ -45,27 +30,47 @@ export default function Found({
   opponentAccepted,
 }: FoundProps) {
   return (
-    <div className="found-modal">
-      <h2>Match found</h2>
+    <div className="screen modal-screen">
+      <div className="modal">
+        <h3>Игра найдена</h3>
+        <h1>Примите игру</h1>
 
-      <PlayerCard
-        name={playerName}
-        avatar={playerProfileAvatar}
-        slipper={playerSlipper}
-        accepted={playerAccepted}
-      />
+        <div className="players">
+          <MatchPlayerCard
+            slipperSrc={playerSlipper}
+            name={playerName}
+            avatarSrc={playerProfileAvatar}
+            isAccepted={playerAccepted}
+          />
 
-      <PlayerCard
-        name={opponentName}
-        avatar={opponentAvatar}
-        slipper={opponentSlipper}
-        accepted={opponentAccepted}
-      />
+          <div className="players-vs">VS</div>
 
-      <button onClick={onAccept} disabled={playerAccepted}>
-        {playerAccepted ? "Accepted" : "Accept"}
-      </button>
-      <button onClick={onClose}>Cancel</button>
+          <MatchPlayerCard
+            slipperSrc={opponentSlipper || OPPONENT_SLIPPER}
+            name={opponentName || OPPONENT_NAME}
+            avatarSrc={opponentAvatar}
+            isAccepted={opponentAccepted}
+          />
+        </div>
+
+        <div className="search-row modal-action-row">
+          <button
+            className={`main-btn modal-main-btn ${playerAccepted ? "accepted" : ""}`}
+            onClick={onAccept}
+            disabled={playerAccepted}
+          >
+            {playerAccepted ? "Игра принята" : "Принять игру"}
+          </button>
+
+          <button
+            className="cancel-btn"
+            onClick={onClose}
+            aria-label="Отменить игру"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
