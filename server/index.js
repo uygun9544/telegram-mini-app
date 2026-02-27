@@ -483,7 +483,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.url === "/health") {
-    const payload = {
+    writeJson(res, 200, {
       ok: true,
       service: "telegram-mini-app-matchmaking",
       queueSize: queue.length,
@@ -494,10 +494,7 @@ const server = http.createServer(async (req, res) => {
       storagePath: dataDirPath,
       storageMode,
       timestamp: new Date().toISOString()
-    };
-
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify(payload));
+    });
     return;
   }
 
