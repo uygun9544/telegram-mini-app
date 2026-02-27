@@ -311,6 +311,7 @@ export default function App() {
     screenContent = (
       <Game
         mode={gameMode}
+        onExitHome={() => setScreen("home")}
         onlineRoomId={onlineRoomId ?? undefined}
         onlineOpponentName={onlineOpponent?.name}
         onlineOpponentAvatar={onlineOpponent?.avatarUrl ?? undefined}

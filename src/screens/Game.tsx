@@ -28,6 +28,7 @@ import {
 interface GameProps {
   user?: TelegramUser | null;
   mode?: GameMode;
+  onExitHome?: () => void;
   onlineRoomId?: string;
   onlineOpponentName?: string;
   onlineOpponentAvatar?: string;
@@ -61,6 +62,7 @@ function toColorItem(colorName: string): ColorItem {
 
 export default function Game({
   onExitToWinner,
+  onExitHome,
   user,
   onlineRoomId,
   onlineOpponentName,
@@ -562,6 +564,13 @@ export default function Game({
           </div>
         </div>
 
+        <div className="round-meta-top">
+          <h2 className="round-title-top">Раунд {round}</h2>
+          <div className="main-timer round-timer-top">
+            <span>{mainTimerText}</span>
+          </div>
+        </div>
+
         <div className="player-half right">
           <div className="slots">
             {[0, 1, 2].map(i => (
@@ -574,7 +583,6 @@ export default function Game({
 
       <div className="round-box-wrap">
         <div className={`round-box ${roundHitOwner ? "hit" : ""}`}>
-          <h2>Раунд {round}</h2>
           <p className="round-hint">Нажмите быстрее всех в таком порядке</p>
           <div className="big-order order-preview">
             <span
@@ -596,9 +604,9 @@ export default function Game({
         )}
       </div>
 
-      <div className="main-timer">
-        <span>{mainTimerText}</span>
-      </div>
+      <div className="time-display">{playerResultText}</div>
+
+      <div className="time-display enemy">{enemyResultText}</div>
 
       {winnerText && (
         <div className="winner-popup">{winnerText}</div>
@@ -643,9 +651,11 @@ export default function Game({
         )}
       </div>
 
-      <div className="time-display">{playerResultText}</div>
-
-      <div className="time-display enemy">{enemyResultText}</div>
+      {mode === "training" && onExitHome ? (
+        <div className="game-home-row">
+          <button className="mode-toggle" onClick={onExitHome}>На главную</button>
+        </div>
+      ) : null}
     </div>
   );
 }

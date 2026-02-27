@@ -632,17 +632,22 @@ button {
 }
 
 .top-bar {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  padding: 4px;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  position: relative;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
 }
 
 .player-half {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
+  min-width: 0;
 }
 
 .player-half.right {
@@ -650,21 +655,48 @@ button {
 }
 
 .mini {
-  width: 36px;
-  height: 36px;
+  width: 56px;
+  height: 56px;
   object-fit: contain;
 }
 
 .slots {
   display: flex;
-  gap: 8px;
+  gap: 4px;
 }
 
 .slot {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
   background: var(--color-muted);
+}
+
+.round-meta-top {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+}
+
+.round-title-top {
+  margin: 0;
+  font-size: var(--text-2-size);
+  line-height: var(--text-2-line);
+  font-weight: 400;
+}
+
+.main-timer.round-timer-top {
+  margin: 0;
+  font-size: var(--text-3-size);
+  line-height: var(--text-3-line);
 }
 
 .slot.win {
@@ -672,9 +704,8 @@ button {
 }
 
 .round-box {
-  background: var(--color-surface);
-  padding: 12px 16px 24px;
-  border-radius: var(--radius-xl);
+  background: transparent;
+  padding: 18px 16px 8px;
   text-align: center;
 }
 
@@ -698,7 +729,7 @@ button {
 }
 
 .round-box .round-hint {
-  opacity: 0.5;
+  opacity: 0.3;
   font-size: var(--text-3-size);
   line-height: var(--text-3-line);
 }
@@ -769,6 +800,13 @@ button {
   position: relative;
 }
 
+.game-home-row {
+  margin-top: auto;
+  padding-bottom: 4px;
+  display: flex;
+  justify-content: center;
+}
+
 .click-marker {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -828,15 +866,17 @@ button {
 }
 
 .time-display {
-  margin-top: 8px;
+  margin-top: 12px;
   min-height: var(--text-2-line);
   text-align: center;
+  color: var(--color-text);
   font-size: var(--text-2-size);
   line-height: var(--text-2-line);
 }
 
 .time-display.enemy {
-  opacity: 0.6;
+  margin-top: 6px;
+  opacity: 1;
 }
 
 .winner-screen {
