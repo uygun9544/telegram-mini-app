@@ -4,8 +4,8 @@ interface SearchingProps {
   onCancel: () => void;
   slipperSrc?: string;
   onTraining: () => void;
-  onChangeSlipper: () => void;
-  onlineWsUrl: string;
+  onPrevSlipper: () => void;
+  onNextSlipper: () => void;
   balance: number | null;
   isFound: boolean;
 }
@@ -14,8 +14,8 @@ export default function Searching({
   onCancel,
   slipperSrc,
   onTraining,
-  onChangeSlipper,
-  onlineWsUrl,
+  onPrevSlipper,
+  onNextSlipper,
   balance,
   isFound
 }: SearchingProps) {
@@ -23,10 +23,10 @@ export default function Searching({
     <LobbyScreenLayout
       screenClassName={`searching-screen ${isFound ? "found-underlay" : ""}`}
       balance={balance}
-      onlineWsUrl={onlineWsUrl}
       slipperSrc={slipperSrc || ""}
       onTraining={onTraining}
-      onChangeSlipper={onChangeSlipper}
+      onPrevSlipper={onPrevSlipper}
+      onNextSlipper={onNextSlipper}
       isChangeSlipperDisabled
       bottomContent={(
         <div className="search-row">

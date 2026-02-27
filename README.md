@@ -179,4 +179,37 @@ VITE_MATCH_WS_URL=wss://your-domain.com
 - Тапок назначается игроку случайно при первом входе и сохраняется локально по `playerId`.
 - Добавляй новые тапки в папку `src/assets/slippers` (png/jpg/webp/svg), они автоматически попадут в рандомный пул.
 - Базовые тапки `default` и `default enemy` тоже остаются в пуле.
+
+## Автодеплой через GitHub Actions (Render + Beget)
+
+В репозиторий добавлен workflow:
+
+- `.github/workflows/deploy.yml`
+
+Что делает при push в `main`:
+
+1. Прогоняет проверки (`npm run deploy:check`)
+2. Собирает фронт
+3. Загружает `dist/` на Beget по FTP
+4. Триггерит деплой backend на Render через Deploy Hook
+
+### Какие Secrets нужно добавить в GitHub
+
+Открой GitHub → `Settings` → `Secrets and variables` → `Actions` → `New repository secret`.
+
+Обязательные:
+
+- `BEGET_FTP_HOST` — FTP хост Beget
+- `BEGET_FTP_USERNAME` — FTP логин
+- `BEGET_FTP_PASSWORD` — FTP пароль
+- `BEGET_FTP_TARGET_DIR` — путь на сервере, куда заливать фронт (например `/public_html/`)
+- `RENDER_DEPLOY_HOOK_URL` — Deploy Hook URL из Render сервиса backend
+
+Для сборки фронта (рекомендуется):
+
+- `VITE_MATCH_WS_URL` — например `wss://your-render-domain.onrender.com`
+- `VITE_TRAINING_CONFIG_URL` — например `https://your-render-domain.onrender.com/training-config`
+- `VITE_LEADERBOARD_URL` — например `https://your-render-domain.onrender.com/leaders`
+
+После добавления секретов просто пушь в `main` — деплой пойдёт автоматически.
 "# telegram-mini-app" 

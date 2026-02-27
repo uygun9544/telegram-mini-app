@@ -5,20 +5,32 @@ import Searching from "./screens/Searching";
 import Found from "./screens/Found";
 import Game from "./screens/Game";
 import Winner from "./screens/Winner";
+import Leaders from "./screens/Leaders";
 import type { GameMode } from "./game/types";
 import { startTrainingBotConfigAutoRefresh } from "./game/trainingConfig";
 import type { PlayerProfile, RoundPlan } from "./online/types";
-import { onlineClient, ONLINE_WS_URL } from "./online/client";
+import { onlineClient } from "./online/client";
 import { getTelegramUser } from "./telegram";
 import {
   buildOnlinePlayerProfile,
-  rerollPlayerSlipper,
+  cyclePlayerSlipper,
 } from "./utils/player";
 
-type Screen = "home" | "searching" | "game" | "winner";
+type Screen = "home" | "searching" | "game" | "winner" | "leaders";
+
+function getInitialScreen(): Screen {
+  if (typeof window === "undefined") return "home";
+
+  const screen = new URLSearchParams(window.location.search).get("screen");
+  if (screen === "leaders") {
+    return "leaders";
+  }
+
+  return "home";
+}
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("home");
+  const [screen, setScreen] = useState<Screen>(getInitialScreen);
   const [, forcePlayerProfileRefresh] = useState(0);
   const [balance, setBalance] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -217,8 +229,13 @@ export default function App() {
     }
   }
 
-  function handleChangeSlipper() {
-    rerollPlayerSlipper(telegramUser);
+  function handlePrevSlipper() {
+    cyclePlayerSlipper(telegramUser, "prev");
+    forcePlayerProfileRefresh((value) => value + 1);
+  }
+
+  function handleNextSlipper() {
+    cyclePlayerSlipper(telegramUser, "next");
     forcePlayerProfileRefresh((value) => value + 1);
   }
 
@@ -252,11 +269,12 @@ export default function App() {
   if (screen === "home") {
     screenContent = (
       <Home
-        onlineWsUrl={ONLINE_WS_URL}
         slipperSrc={playerProfileSlipper}
         balance={balance}
         onTraining={startTrainingNow}
-        onChangeSlipper={handleChangeSlipper}
+        onLeaders={() => setScreen("leaders")}
+        onPrevSlipper={handlePrevSlipper}
+        onNextSlipper={handleNextSlipper}
         onPlay={handlePlay}
       />
     );
@@ -267,8 +285,8 @@ export default function App() {
           slipperSrc={playerProfileSlipper}
           balance={balance}
           onTraining={startTrainingNow}
-          onChangeSlipper={handleChangeSlipper}
-          onlineWsUrl={ONLINE_WS_URL}
+          onPrevSlipper={handlePrevSlipper}
+          onNextSlipper={handleNextSlipper}
           isFound={Boolean(onlineRoomId && onlineOpponent)}
           onCancel={() => leaveSearchingToHome("queue")}
         />
@@ -319,6 +337,8 @@ export default function App() {
         onExit={() => setScreen("home")}
       />
     );
+  } else if (screen === "leaders") {
+    screenContent = <Leaders onHome={() => setScreen("home")} />;
   }
 
   if (!screenContent) return null;

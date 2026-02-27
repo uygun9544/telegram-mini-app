@@ -213,11 +213,12 @@ function upsertPlayerToPostgres(playerId) {
   void postgresPool
     .query(
       `
-        INSERT INTO player_stats (player_id, name, balance, wins, losses)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO player_stats (player_id, name, balance, wins, losses, avatar_url)
+        VALUES ($1, $2, $3, $4, $5, $6)
         ON CONFLICT (player_id)
         DO UPDATE SET
           name = EXCLUDED.name,
+          avatar_url = EXCLUDED.avatar_url,
           balance = EXCLUDED.balance,
           wins = EXCLUDED.wins,
           losses = EXCLUDED.losses,
@@ -228,7 +229,8 @@ function upsertPlayerToPostgres(playerId) {
         stats.name,
         stats.balance,
         stats.wins,
-        stats.losses
+        stats.losses,
+        stats.avatarUrl || null
       ]
     )
     .catch((error) => {
@@ -254,6 +256,7 @@ async function initializePostgresIfConfigured() {
       CREATE TABLE IF NOT EXISTS player_stats (
         player_id TEXT PRIMARY KEY,
         name TEXT NOT NULL DEFAULT 'Игрок',
+        avatar_url TEXT,
         balance INT NOT NULL DEFAULT 300,
         wins INT NOT NULL DEFAULT 0,
         losses INT NOT NULL DEFAULT 0,
@@ -262,14 +265,20 @@ async function initializePostgresIfConfigured() {
       )
     `);
 
+    await postgresPool.query(`
+      ALTER TABLE player_stats
+      ADD COLUMN IF NOT EXISTS avatar_url TEXT
+    `);
+
     const { rows } = await postgresPool.query(
-      "SELECT player_id, name, balance, wins, losses FROM player_stats"
+      "SELECT player_id, name, avatar_url, balance, wins, losses FROM player_stats"
     );
 
     rows.forEach((row) => {
       playerStats[row.player_id] = {
         playerId: row.player_id,
         name: row.name || "Игрок",
+        avatarUrl: row.avatar_url || null,
         balance: Number(row.balance) || DEFAULT_BALANCE,
         wins: Number(row.wins) || 0,
         losses: Number(row.losses) || 0
@@ -292,6 +301,7 @@ function ensurePlayerStats(playerId) {
     playerStats[playerId] = {
       playerId,
       name: "Игрок",
+      avatarUrl: null,
       balance: DEFAULT_BALANCE,
       wins: 0,
       losses: 0
@@ -308,6 +318,10 @@ function ensurePlayerStats(playerId) {
 
   if (typeof stats.name !== "string" || !stats.name.trim()) {
     stats.name = "Игрок";
+  }
+
+  if (typeof stats.avatarUrl !== "string" || !stats.avatarUrl.trim()) {
+    stats.avatarUrl = null;
   }
 
   if (typeof stats.balance !== "number") {
@@ -334,6 +348,10 @@ function updatePlayerStatsMeta(playerId, patch) {
     stats.name = patch.name.trim();
   }
 
+  if (typeof patch.avatarUrl === "string" && patch.avatarUrl.trim()) {
+    stats.avatarUrl = patch.avatarUrl;
+  }
+
   savePlayers(playerStats);
   upsertPlayerToPostgres(playerId);
 }
@@ -354,6 +372,7 @@ function buildLeaderboard(limit = 50) {
       return {
         playerId: row.playerId,
         name: row.name || "Игрок",
+        avatarUrl: row.avatarUrl || null,
         balance,
         wins,
         losses,
@@ -485,6 +504,20 @@ const server = http.createServer(async (req, res) => {
   if (req.url?.startsWith("/leaderboard") && req.method === "GET") {
     const parsedUrl = new URL(req.url, `http://${req.headers.host || "localhost"}`);
     const limit = parsedUrl.searchParams.get("limit") || "50";
+    const rows = buildLeaderboard(Number(limit));
+
+    writeJson(res, 200, {
+      ok: true,
+      totalPlayers: Object.keys(playerStats).length,
+      limit: rows.length,
+      rows
+    });
+    return;
+  }
+
+  if (req.url?.startsWith("/leaders") && req.method === "GET") {
+    const parsedUrl = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+    const limit = parsedUrl.searchParams.get("limit") || "20";
     const rows = buildLeaderboard(Number(limit));
 
     writeJson(res, 200, {
@@ -680,7 +713,8 @@ wss.on("connection", (ws) => {
       client.slipper = profile.slipper || "/default.png";
 
       updatePlayerStatsMeta(client.playerId, {
-        name: client.playerName
+        name: client.playerName,
+        avatarUrl: client.avatarUrl
       });
 
       const balance = ensurePlayerBalance(client.playerId);
@@ -706,7 +740,8 @@ wss.on("connection", (ws) => {
       client.slipper = profile.slipper || client.slipper || "/default.png";
 
       updatePlayerStatsMeta(client.playerId, {
-        name: client.playerName
+        name: client.playerName,
+        avatarUrl: client.avatarUrl
       });
 
       const balance = ensurePlayerBalance(client.playerId);

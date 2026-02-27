@@ -41,6 +41,10 @@ const AVAILABLE_SLIPPERS = Array.from(
   new Set([...Object.values(discoveredSlippers), ...fallbackSlippers])
 );
 
+export function getAvailableSlippers(): string[] {
+  return AVAILABLE_SLIPPERS;
+}
+
 const availableSlipperSet = new Set(AVAILABLE_SLIPPERS);
 
 const PLAYER_SLIPPER_STORAGE_KEY = "player-slippers-v1";
@@ -138,6 +142,27 @@ function setPlayerSlipper(user: TelegramUser | null | undefined, slipper: string
 export function rerollPlayerSlipper(user?: TelegramUser | null): string {
   const currentSlipper = getOrAssignPlayerSlipper(user);
   const nextSlipper = pickRandomSlipper(currentSlipper);
+  setPlayerSlipper(user, nextSlipper);
+  return nextSlipper;
+}
+
+export function cyclePlayerSlipper(
+  user: TelegramUser | null | undefined,
+  direction: "prev" | "next"
+): string {
+  if (AVAILABLE_SLIPPERS.length === 0) {
+    const fallback = fallbackSlippers[0];
+    setPlayerSlipper(user, fallback);
+    return fallback;
+  }
+
+  const currentSlipper = getOrAssignPlayerSlipper(user);
+  const currentIndex = AVAILABLE_SLIPPERS.indexOf(currentSlipper);
+  const safeCurrentIndex = currentIndex >= 0 ? currentIndex : 0;
+  const offset = direction === "next" ? 1 : -1;
+  const nextIndex =
+    (safeCurrentIndex + offset + AVAILABLE_SLIPPERS.length) % AVAILABLE_SLIPPERS.length;
+  const nextSlipper = AVAILABLE_SLIPPERS[nextIndex] || fallbackSlippers[0];
   setPlayerSlipper(user, nextSlipper);
   return nextSlipper;
 }

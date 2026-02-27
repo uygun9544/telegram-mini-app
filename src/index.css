@@ -169,6 +169,12 @@ button {
   padding-left: 26px;
 }
 
+.balance-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .balance-skeleton {
   display: inline-block;
   width: 64px;
@@ -203,15 +209,6 @@ button {
   cursor: default;
 }
 
-.debug-ws {
-  margin-top: 8px;
-  opacity: 0.15;
-  font-size: var(--text-3-size);
-  line-height: var(--text-3-line);
-  text-align: center;
-  word-break: break-all;
-}
-
 .title {
   margin: 20px 0 0;
   text-align: center;
@@ -220,6 +217,31 @@ button {
 .home-title {
   margin-top: 16px;
   opacity: 0.5;
+}
+
+.lobby-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.lobby-main-area {
+  display: flex;
+  flex-direction: column;
+}
+
+.lobby-main-area-centered {
+  flex: 1;
+  justify-content: center;
+}
+
+.lobby-main-block {
+  width: min(100%, 500px);
+  margin: 0 auto;
+}
+
+.lobby-bottom-content {
+  margin-top: auto;
 }
 
 .home-middle-action {
@@ -245,6 +267,79 @@ button {
   flex-direction: column;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.lobby-card-viewport {
+  width: min(100%, 500px);
+  margin: 12px auto 0;
+  position: relative;
+  touch-action: pan-y;
+}
+
+.lobby-card-layer {
+  width: 100%;
+  will-change: transform, opacity;
+}
+
+.lobby-card-viewport .home-card {
+  width: 100%;
+  margin: 0;
+}
+
+.lobby-card-viewport .lobby-card-layer + .lobby-card-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.slipper-nav-row {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.slipper-nav-btn {
+  width: 52px;
+  height: 52px;
+  border: 0;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.4);
+  color: #fff;
+  font-size: 70px;
+  line-height: 1;
+  font-weight: 300;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.slipper-nav-icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+.slipper-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.lobby-card-exit-next {
+  animation: lobbyCardExitNext 0.28s ease forwards;
+}
+
+.lobby-card-exit-prev {
+  animation: lobbyCardExitPrev 0.28s ease forwards;
+}
+
+.lobby-card-enter-next {
+  animation: lobbyCardEnterNext 0.28s ease forwards;
+}
+
+.lobby-card-enter-prev {
+  animation: lobbyCardEnterPrev 0.28s ease forwards;
 }
 
 .home-middle-action + .home-card {
@@ -335,6 +430,80 @@ button {
   z-index: 100;
   justify-content: flex-end;
   background: rgba(0, 0, 0, 0.5);
+}
+
+.leaders-screen {
+  padding-top: 16px;
+}
+
+.leaders-top-row {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.leaders-title {
+  margin-top: 18px;
+}
+
+.leaders-list {
+  margin-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  overflow: auto;
+}
+
+.leaders-row {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.leaders-rank {
+  opacity: 0.55;
+}
+
+.leaders-player {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.leaders-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
+.leaders-avatar-fallback {
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.leaders-name {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.leaders-balance {
+  font-variant-numeric: tabular-nums;
+}
+
+.leaders-state {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
 }
 
 .found-underlay .cancel-btn:disabled {
@@ -868,6 +1037,54 @@ button {
   100% {
     opacity: 0;
     transform: translate(calc(-50% + 10px), calc(-50% - 2px)) rotate(6deg) scale(1.02);
+  }
+}
+
+@keyframes lobbyCardExitNext {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(50px) scale(0.8);
+  }
+}
+
+@keyframes lobbyCardExitPrev {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-50px) scale(0.8);
+  }
+}
+
+@keyframes lobbyCardEnterNext {
+  from {
+    opacity: 0;
+    transform: translateX(-50px) scale(0.8);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes lobbyCardEnterPrev {
+  from {
+    opacity: 0;
+    transform: translateX(50px) scale(0.8);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
   }
 }
 

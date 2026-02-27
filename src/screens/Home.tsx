@@ -3,8 +3,9 @@ import LobbyScreenLayout from "../components/LobbyScreenLayout";
 interface HomeProps {
   onTraining: () => void;
   onPlay: () => void;
-  onChangeSlipper: () => void;
-  onlineWsUrl: string;
+  onLeaders: () => void;
+  onPrevSlipper: () => void;
+  onNextSlipper: () => void;
   slipperSrc: string;
   balance: number | null;
 }
@@ -12,8 +13,9 @@ interface HomeProps {
 export default function Home({
   onTraining,
   onPlay,
-  onChangeSlipper,
-  onlineWsUrl,
+  onLeaders,
+  onPrevSlipper,
+  onNextSlipper,
   slipperSrc,
   balance
 }: HomeProps) {
@@ -21,10 +23,11 @@ export default function Home({
     <LobbyScreenLayout
       screenClassName="home-screen"
       balance={balance}
-      onlineWsUrl={onlineWsUrl}
       slipperSrc={slipperSrc}
       onTraining={onTraining}
-      onChangeSlipper={onChangeSlipper}
+      onLeaders={onLeaders}
+      onPrevSlipper={onPrevSlipper}
+      onNextSlipper={onNextSlipper}
       bottomContent={(
         <button className="main-btn" onClick={onPlay}>
           Играть
