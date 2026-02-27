@@ -242,7 +242,7 @@ button {
 }
 
 .lobby-main-block {
-  width: min(100%, 500px);
+  width: min(100%, 400px);
   margin: 0 auto;
 }
 
@@ -262,7 +262,7 @@ button {
 
 .home-card {
   width: min(100%, 500px);
-  max-width: 500px;
+  max-width: 400px;
   aspect-ratio: 1 / 1;
   margin: 12px auto 0;
   padding: 16px;
@@ -276,7 +276,7 @@ button {
 }
 
 .lobby-card-viewport {
-  width: min(100%, 500px);
+  width: min(100%, 400px);
   margin: 12px auto 0;
   position: relative;
   touch-action: pan-y;
