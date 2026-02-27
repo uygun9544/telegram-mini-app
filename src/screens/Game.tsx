@@ -577,11 +577,11 @@ export default function Game({
         </div>
 
         <div className="player-half right">
-          <div className="slots">
-            {[0, 1, 2].map(i => (
-              <div key={i} className={`slot ${i < enemyWins ? "win" : ""}`} />
-            ))}
-          </div>
+            <div className="slots">
+              {[0, 1, 2].map(i => (
+                <div key={i} className={`slot${i < enemyWins ? " enemy-win" : ""}`} />
+              ))}
+            </div>
           <img src={enemySlipper} className="mini" />
         </div>
       </div>

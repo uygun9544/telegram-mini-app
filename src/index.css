@@ -678,6 +678,10 @@ button {
   background: var(--color-muted);
 }
 
+.enemy-slot {
+  background: #E02E2E;
+}
+
 .round-meta-top {
   position: absolute;
   top: 50%;
@@ -707,6 +711,10 @@ button {
 
 .slot.win {
   background: var(--color-success);
+}
+
+.enemy-win {
+  background: #E02E2E !important;
 }
 
 .round-box {
