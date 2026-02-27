@@ -4,6 +4,7 @@ interface SearchingProps {
   onCancel: () => void;
   slipperSrc?: string;
   onTraining: () => void;
+  onLeaders: () => void;
   onPrevSlipper: () => void;
   onNextSlipper: () => void;
   balance: number | null;
@@ -14,6 +15,7 @@ export default function Searching({
   onCancel,
   slipperSrc,
   onTraining,
+  onLeaders,
   onPrevSlipper,
   onNextSlipper,
   balance,
@@ -25,9 +27,9 @@ export default function Searching({
       balance={balance}
       slipperSrc={slipperSrc || ""}
       onTraining={onTraining}
+      onLeaders={onLeaders}
       onPrevSlipper={onPrevSlipper}
       onNextSlipper={onNextSlipper}
-      isChangeSlipperDisabled
       bottomContent={(
         <div className="search-row">
           <div className="search-box">Идёт поиск игры</div>

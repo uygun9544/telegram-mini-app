@@ -28,7 +28,6 @@ export default function LobbyScreenLayout({
 }: LobbyScreenLayoutProps) {
   const ANIMATION_DURATION_MS = 280;
   const SWIPE_THRESHOLD_PX = 40;
-  const isHomeScreen = screenClassName.includes("home-screen");
   const [displayedSrc, setDisplayedSrc] = useState(slipperSrc);
   const [incomingSrc, setIncomingSrc] = useState<string | null>(null);
   const [direction, setDirection] = useState<"prev" | "next">("next");
@@ -95,7 +94,7 @@ export default function LobbyScreenLayout({
       <TopBalanceBar onTraining={onTraining} balance={balance} onLeaders={onLeaders} />
 
       <div className="lobby-content">
-        <div className={`lobby-main-area ${isHomeScreen ? "lobby-main-area-centered" : ""}`}>
+        <div className="lobby-main-area lobby-main-area-centered">
           <div className="lobby-main-block">
             <h1 className="title text-2 home-title">Твой тапок</h1>
 

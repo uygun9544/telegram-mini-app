@@ -285,6 +285,7 @@ export default function App() {
           slipperSrc={playerProfileSlipper}
           balance={balance}
           onTraining={startTrainingNow}
+          onLeaders={() => setScreen("leaders")}
           onPrevSlipper={handlePrevSlipper}
           onNextSlipper={handleNextSlipper}
           isFound={Boolean(onlineRoomId && onlineOpponent)}

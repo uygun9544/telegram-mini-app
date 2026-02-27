@@ -705,7 +705,7 @@ button {
 
 .round-box {
   background: transparent;
-  padding: 18px 16px 8px;
+  padding: 4px 16px;
   text-align: center;
 }
 
@@ -768,6 +768,7 @@ button {
 .order-arrow {
   font-size: 24px;
   margin: 0 4px;
+  opacity: 0.5;
 }
 
 .main-timer {
@@ -788,8 +789,8 @@ button {
   border-radius: var(--radius-lg);
   background: var(--color-surface-3);
   text-align: center;
-  font-size: var(--text-h3-size);
-  line-height: var(--text-h3-line);
+  font-size: var(--text-h4-size);
+  line-height: var(--text-h4-line);
   font-weight: 400;
   animation: fadeIn 0.3s ease;
 }
