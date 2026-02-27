@@ -14,19 +14,19 @@ function getHealthUrl(): string {
 
 const HEALTH_URL = getHealthUrl();
 
-export async function fetchOnlinePlayersCount(): Promise<number> {
+export async function fetchSearchingPlayersCount(): Promise<number> {
   const response = await fetch(HEALTH_URL, {
     method: "GET",
     cache: "no-store"
   });
 
   if (!response.ok) {
-    throw new Error("Failed to load online players count");
+    throw new Error("Failed to load searching players count");
   }
 
   const payload = (await response.json()) as {
-    connectedClients?: number;
+    queueSize?: number;
   };
 
-  return Math.max(0, Number(payload.connectedClients) || 0);
+  return Math.max(0, Number(payload.queueSize) || 0);
 }

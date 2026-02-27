@@ -219,8 +219,8 @@ button {
   opacity: 0.5;
 }
 
-.lobby-online-count {
-  margin: 6px 0 0;
+.lobby-searching-count {
+  margin: 0;
   text-align: center;
   opacity: 0.2;
 }
@@ -353,7 +353,7 @@ button {
 }
 
 .home-screen .main-btn {
-  margin-top: 20px;
+  margin-top: 10px;
 }
 
 .home-card-image {
@@ -390,7 +390,7 @@ button {
 }
 
 .searching-screen .search-row {
-  margin-top: 20px;
+  margin-top: 10px;
 }
 
 .search-box {

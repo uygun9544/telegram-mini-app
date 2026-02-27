@@ -8,7 +8,7 @@ interface HomeProps {
   onNextSlipper: () => void;
   slipperSrc: string;
   balance: number | null;
-  onlinePlayersCount: number | null;
+  searchingPlayersCount: number | null;
 }
 
 export default function Home({
@@ -19,13 +19,13 @@ export default function Home({
   onNextSlipper,
   slipperSrc,
   balance,
-  onlinePlayersCount
+  searchingPlayersCount
 }: HomeProps) {
   return (
     <LobbyScreenLayout
       screenClassName="home-screen"
       balance={balance}
-      onlinePlayersCount={onlinePlayersCount}
+      searchingPlayersCount={searchingPlayersCount}
       slipperSrc={slipperSrc}
       onTraining={onTraining}
       onLeaders={onLeaders}

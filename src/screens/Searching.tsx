@@ -8,7 +8,7 @@ interface SearchingProps {
   onPrevSlipper: () => void;
   onNextSlipper: () => void;
   balance: number | null;
-  onlinePlayersCount: number | null;
+  searchingPlayersCount: number | null;
   isFound: boolean;
 }
 
@@ -20,14 +20,14 @@ export default function Searching({
   onPrevSlipper,
   onNextSlipper,
   balance,
-  onlinePlayersCount,
+  searchingPlayersCount,
   isFound
 }: SearchingProps) {
   return (
     <LobbyScreenLayout
       screenClassName={`searching-screen ${isFound ? "found-underlay" : ""}`}
       balance={balance}
-      onlinePlayersCount={onlinePlayersCount}
+      searchingPlayersCount={searchingPlayersCount}
       slipperSrc={slipperSrc || ""}
       onTraining={onTraining}
       onLeaders={onLeaders}

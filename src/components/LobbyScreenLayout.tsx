@@ -6,7 +6,7 @@ import chevronRightIcon from "../assets/chevron_right_20.svg";
 interface LobbyScreenLayoutProps {
   screenClassName: string;
   balance: number | null;
-  onlinePlayersCount?: number | null;
+  searchingPlayersCount?: number | null;
   slipperSrc: string;
   onTraining: () => void;
   onLeaders?: () => void;
@@ -19,7 +19,7 @@ interface LobbyScreenLayoutProps {
 export default function LobbyScreenLayout({
   screenClassName,
   balance,
-  onlinePlayersCount,
+  searchingPlayersCount,
   slipperSrc,
   onTraining,
   onLeaders,
@@ -36,6 +36,7 @@ export default function LobbyScreenLayout({
   const [isAnimating, setIsAnimating] = useState(false);
   const pendingDirectionRef = useRef<"prev" | "next">("next");
   const swipeStartXRef = useRef<number | null>(null);
+  const normalizedSearchingPlayersCount = Math.max(0, Number(searchingPlayersCount) || 0);
 
   useEffect(() => {
     if (slipperSrc === displayedSrc) return;
@@ -94,9 +95,6 @@ export default function LobbyScreenLayout({
   return (
     <div className={`screen ${screenClassName}`}>
       <TopBalanceBar onTraining={onTraining} balance={balance} onLeaders={onLeaders} />
-      {typeof onlinePlayersCount === "number" ? (
-        <p className="lobby-online-count text-3">Игроков онлайн: {onlinePlayersCount}</p>
-      ) : null}
 
       <div className="lobby-content">
         <div className="lobby-main-area lobby-main-area-centered">
@@ -158,7 +156,12 @@ export default function LobbyScreenLayout({
           </div>
         </div>
 
-        <div className="lobby-bottom-content">{bottomContent}</div>
+        <div className="lobby-bottom-content">
+          <p className="lobby-searching-count text-3">
+            {normalizedSearchingPlayersCount} игроков ищут игру
+          </p>
+          {bottomContent}
+        </div>
       </div>
     </div>
   );
