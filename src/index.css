@@ -786,19 +786,65 @@ button {
 }
 
 .winner-popup {
+  --winner-popup-color: var(--color-border);
   position: fixed;
   top: 45%;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 100;
+  overflow: hidden;
+  isolation: isolate;
   padding: 20px 40px;
   border-radius: var(--radius-lg);
-  background: var(--color-surface-3);
+  border: 2px solid color-mix(in srgb, var(--winner-popup-color) 92%, white 8%);
+  background: color-mix(in srgb, var(--winner-popup-color) 50%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--winner-popup-color) 45%, transparent);
   text-align: center;
   font-size: var(--text-h4-size);
   line-height: var(--text-h4-line);
   font-weight: 400;
   animation: fadeIn 0.3s ease;
+}
+
+.winner-popup::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(
+    105deg,
+    color-mix(in srgb, var(--winner-popup-color) 100%, white 0%) 0%,
+    color-mix(in srgb, var(--winner-popup-color) 88%, white 12%) 32%,
+    color-mix(in srgb, var(--winner-popup-color) 50%, white 50%) 50%,
+    color-mix(in srgb, var(--winner-popup-color) 88%, white 12%) 68%,
+    color-mix(in srgb, var(--winner-popup-color) 100%, white 0%) 100%
+  );
+  background-size: 260% 100%;
+  background-position: 0% 50%;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--winner-popup-color) 55%, transparent));
+  pointer-events: none;
+  animation: winnerPopupBorderGlow 1.5s ease-in-out infinite alternate;
+}
+
+.winner-popup--player {
+  --winner-popup-color: var(--color-success);
+}
+
+.winner-popup--enemy {
+  --winner-popup-color: var(--color-danger);
+}
+
+.winner-popup--draw {
+  --winner-popup-color: var(--color-border);
 }
 
 .game-area {
@@ -839,6 +885,7 @@ button {
   width: 90px;
   height: 90px;
   border-radius: var(--radius-lg);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
   cursor: pointer;
 }
 
@@ -853,19 +900,19 @@ button {
 }
 
 .square.blue {
-  background: linear-gradient(#2d7dff, #0044cc);
+  background: linear-gradient(#5b3af0, #3e18e4);
 }
 
 .square.red {
-  background: linear-gradient(#ff4d4d, #cc0000);
+  background: linear-gradient(#f25a5a, #e02e2e);
 }
 
 .square.yellow {
-  background: linear-gradient(#ffd84d, #e6b800);
+  background: linear-gradient(#f4f770, #ecf240);
 }
 
 .square.green {
-  background: linear-gradient(#34d399, #059669);
+  background: linear-gradient(#37b24d, #229938);
 }
 
 .faded {
@@ -1022,6 +1069,16 @@ button {
   to {
     opacity: 1;
     transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes winnerPopupBorderGlow {
+  from {
+    background-position: 0% 50%;
+  }
+
+  to {
+    background-position: 50% 50%;
   }
 }
 

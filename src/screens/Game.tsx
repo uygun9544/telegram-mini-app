@@ -88,6 +88,7 @@ export default function Game({
 
   const [timerMs, setTimerMs] = useState(0);
   const [winnerText, setWinnerText] = useState<string | null>(null);
+  const [winnerResult, setWinnerResult] = useState<"player" | "enemy" | "draw" | null>(null);
   const [roundHitOwner, setRoundHitOwner] = useState<"player" | "enemy" | null>(null);
   const [roundHitVersion, setRoundHitVersion] = useState(0);
 
@@ -161,6 +162,7 @@ export default function Game({
 
   function setupRoundState() {
     setWinnerText(null);
+    setWinnerResult(null);
     setRoundHitOwner(null);
     setUiPlayerState(null);
     setUiEnemyState(null);
@@ -461,6 +463,7 @@ export default function Game({
     const isEnemyFinalWin = result === "enemy" && enemyWins + 1 >= 3;
 
     if (result === "player") {
+      setWinnerResult("player");
       setRoundHitOwner("player");
       setRoundHitVersion((value) => value + 1);
       setPlayerWins(prev => prev + 1);
@@ -490,6 +493,7 @@ export default function Game({
     }
 
     else if (result === "enemy") {
+      setWinnerResult("enemy");
       setRoundHitOwner("enemy");
       setRoundHitVersion((value) => value + 1);
       setEnemyWins(prev => prev + 1);
@@ -519,6 +523,7 @@ export default function Game({
     }
 
     else {
+      setWinnerResult("draw");
       setWinnerText("Ничья");
     }
 
@@ -609,7 +614,11 @@ export default function Game({
       <div className="time-display enemy">{enemyResultText}</div>
 
       {winnerText && (
-        <div className="winner-popup">{winnerText}</div>
+        <div
+          className={`winner-popup ${winnerResult ? `winner-popup--${winnerResult}` : ""}`}
+        >
+          {winnerText}
+        </div>
       )}
 
       <div className="game-area" ref={gameAreaRef} onClick={handleMissClick}>
