@@ -6,6 +6,7 @@ import chevronRightIcon from "../assets/chevron_right_20.svg";
 interface LobbyScreenLayoutProps {
   screenClassName: string;
   balance: number | null;
+  onlinePlayersCount?: number | null;
   slipperSrc: string;
   onTraining: () => void;
   onLeaders?: () => void;
@@ -18,6 +19,7 @@ interface LobbyScreenLayoutProps {
 export default function LobbyScreenLayout({
   screenClassName,
   balance,
+  onlinePlayersCount,
   slipperSrc,
   onTraining,
   onLeaders,
@@ -92,6 +94,9 @@ export default function LobbyScreenLayout({
   return (
     <div className={`screen ${screenClassName}`}>
       <TopBalanceBar onTraining={onTraining} balance={balance} onLeaders={onLeaders} />
+      {typeof onlinePlayersCount === "number" ? (
+        <p className="lobby-online-count text-3">Игроков онлайн: {onlinePlayersCount}</p>
+      ) : null}
 
       <div className="lobby-content">
         <div className="lobby-main-area lobby-main-area-centered">

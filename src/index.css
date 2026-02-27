@@ -219,6 +219,12 @@ button {
   opacity: 0.5;
 }
 
+.lobby-online-count {
+  margin: 6px 0 0;
+  text-align: center;
+  opacity: 0.2;
+}
+
 .lobby-content {
   flex: 1;
   display: flex;
@@ -442,7 +448,7 @@ button {
 }
 
 .leaders-title {
-  margin-top: 18px;
+  margin-top: 30px;
 }
 
 .leaders-list {

@@ -10,6 +10,7 @@ import type { GameMode } from "./game/types";
 import { startTrainingBotConfigAutoRefresh } from "./game/trainingConfig";
 import type { PlayerProfile, RoundPlan } from "./online/types";
 import { onlineClient } from "./online/client";
+import { fetchOnlinePlayersCount } from "./online/presence";
 import { getTelegramUser } from "./telegram";
 import {
   buildOnlinePlayerProfile,
@@ -33,6 +34,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>(getInitialScreen);
   const [, forcePlayerProfileRefresh] = useState(0);
   const [balance, setBalance] = useState<number | null>(null);
+  const [onlinePlayersCount, setOnlinePlayersCount] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [gameMode, setGameMode] = useState<GameMode>("training");
   const [onlineRoomId, setOnlineRoomId] = useState<string | null>(null);
@@ -80,6 +82,33 @@ export default function App() {
 
     return () => {
       stopTrainingConfigRefresh();
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadOnlinePlayersCount = async () => {
+      try {
+        const count = await fetchOnlinePlayersCount();
+        if (isMounted) {
+          setOnlinePlayersCount(count);
+        }
+      } catch {
+        if (isMounted) {
+          setOnlinePlayersCount(null);
+        }
+      }
+    };
+
+    void loadOnlinePlayersCount();
+    const timer = window.setInterval(() => {
+      void loadOnlinePlayersCount();
+    }, 10000);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(timer);
     };
   }, []);
 
@@ -271,6 +300,7 @@ export default function App() {
       <Home
         slipperSrc={playerProfileSlipper}
         balance={balance}
+        onlinePlayersCount={onlinePlayersCount}
         onTraining={startTrainingNow}
         onLeaders={() => setScreen("leaders")}
         onPrevSlipper={handlePrevSlipper}
@@ -284,6 +314,7 @@ export default function App() {
         <Searching
           slipperSrc={playerProfileSlipper}
           balance={balance}
+          onlinePlayersCount={onlinePlayersCount}
           onTraining={startTrainingNow}
           onLeaders={() => setScreen("leaders")}
           onPrevSlipper={handlePrevSlipper}

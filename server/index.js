@@ -381,8 +381,8 @@ function buildLeaderboard(limit = 50) {
       };
     })
     .sort((a, b) => {
-      if (b.wins !== a.wins) return b.wins - a.wins;
       if (b.balance !== a.balance) return b.balance - a.balance;
+      if (b.wins !== a.wins) return b.wins - a.wins;
       if (a.losses !== b.losses) return a.losses - b.losses;
       return a.name.localeCompare(b.name, "ru");
     })
